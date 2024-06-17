@@ -1,0 +1,588 @@
+{% extends "base.html" %} {% block title %}Dashboard{% endblock %}
+<meta charset="UTF-8" />
+<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+<title>NFR Portal</title>
+
+{% block content %}
+<style>
+    div.dt-buttons {
+        float: right;
+        margin: 0 5px;
+    }
+</style>
+<div class="container">
+    <div class="card card-header">
+        Search Criteria
+    </div>
+
+    <form class="card card-body" id="nfr-form">
+        <div class="form-row form-inline">
+            <div class="form-group col-md-4">
+                <label for="application_name">Select Application:</label>&emsp;
+                <select class="select2 form-control" data-placeholder="Select Application" id="application_name" name="application_name" style="width: 200px;">
+                    <option value="">Select Application</option>
+                    {% for app in apps %}
+                    <option value="{{ app['applicationName'] }}">{{ app['applicationName'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="release_id">Select Release:</label>&emsp;
+                <select class="select2 form-control" data-placeholder="Select Release" id="release_id" name="release_id" style="width: 200px;">
+                    <option value="">Select Release</option>
+                </select>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="transaction_name">Transaction Name:</label>&emsp;
+                <input class="form-control" id="transaction_name" name="transaction_name" placeholder="Type transaction name" style="height: 36px; font-size: 1rem;" type="text" />
+            </div>
+        </div>
+        <br />
+        <div class="row justify-content-center">
+            <div class="col">
+                <div class="row">
+                    <div class="col text-center">
+                        <button class="btn btn-primary mr-2" id="search-records" type="button">Search Records</button>
+                        <button class="btn btn-secondary mr-2" id="reset-form" type="button">Clear Records</button>
+                    </div>
+                    <div class="col-auto text-right">
+                        <a href="#" id="recent-searches-link">Recent Searches</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    <div id="alerts-container"></div>
+    <div class="card mt-3">
+        <div class="card-header">
+            Search Results
+        </div>
+        <div class="card-body" style="min-height: 500px; overflow-y: auto;">
+            <!-- Loader -->
+            <div class="loader"></div>
+            <table class="table table-bordered" id="records-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Application</th>
+                        <th>Release</th>
+                        <th>Scenario</th>
+                        <th>Transaction</th>
+                        <th>SLA</th>
+                        <th>TPS</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Records will be dynamically loaded here -->
+                </tbody>
+            </table>
+            <!-- Edit Modal -->
+            <div aria-hidden="true" aria-labelledby="editModalLabel" class="modal fade" id="editModal" role="dialog" tabindex="-1">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editModalLabel">Edit Record</h5>
+                            <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form id="edit-form">
+                            <div class="modal-body">
+                                <input id="edit-id" name="Id" type="hidden" />
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="edit-application">Application</label>
+                                        <input class="form-control" id="edit-application" name="applicationName" readonly required type="text" />
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="edit-release">Release</label>
+                                        <input class="form-control" id="edit-release" name="releaseID" readonly required type="text" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="edit-scenario">Scenario</label>
+                                        <input class="form-control" id="edit-scenario" name="businessScenario" required type="text" />
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="edit-transaction">Transaction</label>
+                                        <input class="form-control" id="edit-transaction" name="transactionName" required type="text" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="edit-sla">SLA</label>
+                                        <input class="form-control" id="edit-sla" name="SLA" required type="text" />
+                                        <small class="form-text text-danger" id="sla-error"></small>
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="edit-tps">TPS</label>
+                                        <input class="form-control" id="edit-tps" name="TPS" required type="text" />
+                                        <small class="form-text text-danger" id="tps-error"></small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-secondary" data-dismiss="modal" type="button">Close</button>
+                                <button class="btn btn-primary" type="submit">Save changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- Delete Confirmation Modal -->
+            <div aria-hidden="true" aria-labelledby="deleteModalLabel" class="modal fade" id="deleteModal" role="dialog" tabindex="-1">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                            <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to delete this record?
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" data-dismiss="modal" type="button">Close</button>
+                            <button class="btn btn-danger" id="confirm-delete" type="button">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div aria-hidden="true" aria-labelledby="recentSearchesModalLabel" class="modal fade" id="recentSearchesModal" role="dialog" tabindex="-1">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="recentSearchesModalLabel">Recent Searches</h5>
+                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul id="recent-searches-list">
+                    <!-- Recent searches will be populated here -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal" type="button">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        $('.select2').select2();
+
+        // Intercept form submission
+        $('#nfr-form').submit(function(event) {
+            // Prevent default form submission behavior
+            event.preventDefault();
+
+            // Perform custom form submission action here
+            searchRecords();
+        });
+
+
+        // Load releases based on application
+        $('#application_name').change(function() {
+            var appName = $(this).val();
+            $.ajax({
+                url: '/get_releases',
+                type: 'POST',
+                data: { applicationName: appName },
+                success: function(data) {
+                    var releaseDropdown = $('#release_id');
+                    releaseDropdown.empty().append('<option value="">Select Release</option>');
+                    data.forEach(function(release) {
+                        releaseDropdown.append('<option value="' + release + '">' + release + '</option>');
+                    });
+                }
+            });
+        });
+
+        // Fuzzy search for transactions
+        $("#transaction_name").autocomplete({
+            source: function(request, response) {
+                $.ajax({
+                    url: '/suggest_transactions',
+                    type: 'POST',
+                    data: {
+                        term: request.term,
+                        applicationName: $('#application_name').val()
+                    },
+                    success: function(data) {
+                        const matches = fuzzySearch(request.term, data);
+                        response(matches.map(match => ({
+                            label: match,
+                            value: match
+                        })));
+                    }
+                });
+            },
+            minLength: 3,
+            open: function(event, ui) {
+                $(this).autocomplete("widget").css({
+                    "background-color": "lightgray",
+                    "color": "black"
+                });
+                $(this).autocomplete("widget").addClass("custom-autocomplete");
+                // Match the width of the input field
+                var $input = $(this);
+                var $autocomplete = $input.autocomplete("widget");
+                // Use a slight delay to ensure positioning is applied correctly
+        setTimeout(function() {
+            $autocomplete.width($input.outerWidth());
+            $autocomplete.position({
+                my: "left top",
+                at: "left bottom",
+                of: $input
+            });
+                // Remove ARIA live region after opening autocomplete
+            removeAriaLiveRegion();
+        }, 50);
+            },
+            messages: {
+                noResults: '',
+                results: function() {}
+            },
+            select: function(event, ui) {
+                // Set the input value and close the autocomplete
+                $(this).val(ui.item.value);
+                // Remove ARIA live region after opening autocomplete
+                removeAriaLiveRegion();
+                return false; // Prevent the default behavior
+            }
+        });
+
+        // Function to remove ARIA live region
+        function removeAriaLiveRegion() {
+            $('div[role="status"], div[role="alert"]').remove();
+        }
+        // Initialize DataTable
+        var table = $('#records-table').DataTable({
+            searching: true,        // Enable search box
+            paging: true,           // Enable pagination
+            pageLength: 10,         // Set default page size
+            lengthChange: true,     // Enable changing page size
+            ordering: true,         // Enable column sorting
+            info: true,             // Show table info
+            autoWidth: false,       // Disable automatic column width calculation
+            responsive: true,       // Make table responsive
+            dom: 'Blfrtip', // Include buttons for export
+            buttons: [
+                { extend: 'excel', className: 'btn-secondary', text:'Export to Excel' }
+            ],
+            columnDefs: [
+               {
+                   targets: [0],
+                   visible: false
+               },
+                { orderable: false, targets: [7] } // Disable ordering on action buttons column
+            ]
+        });
+
+        // Search records
+        $('#search-records').click(function() {
+           // Show loader when search button is clicked
+           $('.loader').show();
+           // Validate form inputs
+            var applicationName = $('#application_name').val();
+            var releaseID = $('#release_id').val();
+            var transactionName = $('#transaction_name').val();
+
+
+        if (!applicationName) {
+            showAlert('danger', 'Application name is required.');
+            return;
+        }
+        if (!releaseID && !transactionName) {
+            showAlert('danger', 'Either release ID or transaction name is required.');
+            return;
+        }
+
+
+            // Save search criteria in cookie'
+            var formData = {
+               release_id: releaseID,
+               application_name: applicationName,
+               transaction_name: transactionName
+           };
+           $.ajax({
+               type: 'POST',
+               url: '/save_search/main_search', // Dynamic cookie name for index page
+               contentType: 'application/json',
+               data: JSON.stringify(formData),
+               success: function(response) {
+                   console.log('Search saved successfully.');
+                   // Handle success if needed
+               },
+               error: function(xhr, status, error) {
+                   console.error('Error saving search:', error);
+                   // Handle error if needed
+               }
+           });
+
+            $.ajax({
+                url: '/search_records',
+                type: 'POST',
+                data: $('#nfr-form').serialize(),
+                success: function(data) {
+                    table.clear().draw();
+                    if (data.length > 0) {
+                        data.forEach(function(record) {
+                            table.row.add([
+                                record.Id,
+                                record.applicationName,
+                                record.releaseID,
+                                record.businessScenario,
+                                record.transactionName,
+                                record.SLA,
+                                record.TPS,
+                                '<button class="btn btn-primary edit-btn" data-id="' + record.Id + '" title="Edit"> <i class="bi bi-pencil-fill"></i></button>' +
+                                '<button class="btn btn-danger delete-btn" data-id="' + record.Id + '" title="Delete"> <i class="bi bi-trash"></i></button>' <!--                                    <img src="/path/to/edit_icon.png" alt="Edit" style="width: 16px; height: 16px;">-->
+
+                            ]).draw();
+                            table.column(0).visible(false);
+
+                        });
+                    } else {
+                        table.draw();
+                        table.column(0).visible(false);
+                    }
+                },
+               complete: function() {
+                   // Hide loader when request is complete
+                   $('.loader').hide();
+               }
+            });
+        });
+
+        // Reset form
+        $('#reset-form').click(function() {
+            $('#nfr-form')[0].reset();
+            $('.select2').val('').trigger('change');
+            table.clear().draw(); // Clear the DataTable
+            $('#validation-error').hide(); // Hide validation error
+
+        });
+
+        // Edit button click
+        $('#records-table tbody').on('click', '.edit-btn', function() {
+            var recordId = $(this).data('id');
+            $.ajax({
+                url: '/get_record',
+                type: 'POST',
+                data: { Id: recordId },
+                success: function(data) {
+                    var record = data;
+                    $('#edit-id').val(record.Id);
+                    $('#edit-application').val(record.applicationName);
+                    $('#edit-release').val(record.releaseID);
+                    $('#edit-scenario').val(record.businessScenario);
+                    $('#edit-transaction').val(record.transactionName);
+                    $('#edit-sla').val(record.SLA);
+                    $('#edit-tps').val(record.TPS);
+                    $('#editModal').modal('show');
+                }
+            });
+        });
+
+        // Save changes in edit modal
+        $('#edit-form').submit(function(event) {
+            event.preventDefault();
+
+            var sla = $('#edit-sla').val();
+            var tps = $('#edit-tps').val();
+            var slaError = $('#sla-error');
+            var tpsError = $('#tps-error');
+            var valid = true;
+
+            slaError.text('');
+            tpsError.text('');
+
+            if (isNaN(sla) || parseFloat(sla) <= 0) {
+                slaError.text('SLA must be a positive number.');
+                valid = false;
+            }
+
+            if (isNaN(tps) || parseFloat(tps) <= 0) {
+                tpsError.text('TPS must be a positive number.');
+                valid = false;
+            }
+
+            if (!valid) {
+                return;
+            }
+            $.ajax({
+                url: '/update_record',
+                type: 'POST',
+                data: $('#edit-form').serialize(),
+                success: function(data) {
+                    if (data.success) {
+                        // Show success alert
+                        showAlert('success', 'Record updated successfully.');
+                        // Fetch the updated record
+                        $.ajax({
+                            url: '/get_record',
+                            type: 'POST',
+                            data: { Id: $('#edit-id').val() },
+                            success: function(recordData) {
+                                // Update the corresponding row in the data table
+    <!--                                var table = $('#records-table').DataTable();-->
+                                var row = table.row(function(idx, data, node) {
+                                    return data[0] === recordData.Id; // Find the row by record ID
+                                });
+                                if (row.any()) {
+                                    row.data([
+                                        recordData.Id,
+                                        recordData.applicationName,
+                                        recordData.releaseID,
+                                        recordData.businessScenario,
+                                        recordData.transactionName,
+                                        recordData.SLA,
+                                        recordData.TPS,
+                                        '<button class="btn btn-primary edit-btn" data-id="' + recordData.Id + '" title="Edit"><i class="fa fa-edit"></i> </button>' +
+                                        '<button class="btn btn-danger delete-btn" data-id="' + recordData.Id + '" title="Delete"><i class="fa fa-trash-alt"></i> </button>'
+                                    ]).draw();
+                                }
+                                $('#editModal').modal('hide');
+                            }
+                        });
+                    } else {
+                        // Show error alert
+                        showAlert('danger', 'Failed to update record.');
+                    }
+                },
+                error: function() {
+                    // Show error alert
+                    showAlert('danger', 'An error occurred while updating the record.');
+                }
+            });
+        });
+
+        // Delete button click
+        $('#records-table tbody').on('click', '.delete-btn', function() {
+            var recordId = $(this).data('id');
+            $('#confirm-delete').data('id', recordId);
+            $('#deleteModal').modal('show');
+        });
+
+        // Confirm deletion
+        $('#confirm-delete').click(function() {
+            var recordId = $(this).data('id');
+            $.ajax({
+                url: '/delete_record',
+                type: 'POST',
+                data: { Id: recordId },
+                success: function(data) {
+                    if (data.success) {
+                        // Remove the row from the data table
+    <!--                        var table = $('#records-table').DataTable();-->
+                        var row = table.row(function(idx, data, node) {
+                            return data[0] === recordId; // Find the row by record ID
+                        });
+                        if (row.any()) {
+                            row.remove().draw();
+                        }
+                        $('#deleteModal').modal('hide');
+                        // Show success alert
+                        showAlert('success', 'Record deleted successfully.');
+                    } else {
+                        // Show error alert
+                        showAlert('danger', 'Failed to delete record.');
+                    }
+                },
+                error: function() {
+                    // Show error alert
+                    showAlert('danger', 'An error occurred while deleting the record.');
+                }
+            });
+        });
+
+        // Basic fuzzy search function
+        function fuzzySearch(term, arr) {
+            const maxDistance = Math.ceil(term.length / 2);
+            return arr.filter(item => {
+                const lcs = longestCommonSubsequence(term.toLowerCase(), item.toLowerCase());
+                return lcs >= term.length - maxDistance;
+            });
+        }
+
+        function longestCommonSubsequence(s1, s2) {
+            const m = s1.length, n = s2.length;
+            const dp = Array(m + 1).fill().map(() => Array(n + 1).fill(0));
+            for (let i = 1; i <= m; i++) {
+                for (let j = 1; j <= n; j++) {
+                    if (s1[i - 1] === s2[j - 1]) {
+                        dp[i][j] = dp[i - 1][j - 1] + 1;
+                    } else {
+                        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                    }
+                }
+            }
+            return dp[m][n];
+        }
+
+        // Show modal and load recent searches
+       $('#recent-searches-link').click(function(event) {
+           event.preventDefault();
+           $('#recentSearchesModal').modal('show');
+           loadRecentSearches();
+       });
+
+       // Handle recent search click
+       $(document).on('click', '.recent-search-link', function(event) {
+           event.preventDefault();
+           var searchCriteria = $(this).data('search');
+           $('#application_name').val(searchCriteria.application_name).trigger('change');
+           // Set a timeout to ensure the release_id is updated after application_name change
+           setTimeout(function() {
+               $('#release_id').val(searchCriteria.release_id).trigger('change');
+           }, 1000); // Adjust the timeout as necessary
+           if (searchCriteria.transaction_name === 'None') {
+               $('#transaction_name').val('');
+           } else {
+               $('#transaction_name').val(searchCriteria.transaction_name);
+           }
+           $('#recentSearchesModal').modal('hide');
+       });
+
+       function loadRecentSearches() {
+           // Load recent searches from the cookie
+           $.get('/recent_searches/main_search', function(data) {
+               var recentSearchesList = $('#recent-searches-list');
+               recentSearchesList.empty();
+               if (data.length > 0) {
+                   data.forEach(function(search) {
+                       var listItem = `<li><a href="#" class="recent-search-link" data-search='${JSON.stringify(search)}'>${search.application_name} - ${search.release_id} - ${search.transaction_name}</a></li>`;
+                       recentSearchesList.append(listItem);
+                   });
+               } else {
+                   recentSearchesList.append('<li>No recent searches.</li>');
+               }
+           });
+       }
+
+        // Function to display alert
+        function showAlert(type, message) {
+            var alertElement = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                                    message +
+                                    '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                                        '<span aria-hidden="true">&times;</span>' +
+                                    '</button>' +
+                                '</div>');
+            $('#alerts-container').append(alertElement);
+            setTimeout(function() {
+                alertElement.alert('close');
+            }, 5000);
+        }
+         });
+</script>
+{% endblock %}

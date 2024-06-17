@@ -1,0 +1,445 @@
+{% extends "base.html" %} {% block title %}Compare NFR{% endblock %} {% block content %}
+
+<style>
+    div.dt-buttons {
+        float: right;
+        margin: 0 5px;
+    }
+</style>
+<div class="container">
+    <div class="card card-header">
+        Comparison Criertia
+    </div>
+    <form class="card card-body" id="compareForm">
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <select class="form-control" data-placeholder="Select Application" id="applicationName" name="applicationName" required>
+                    <option value=""></option>
+                    {% for app in apps %}
+                    <option value="{{ app['applicationName'] }}">{{ app['applicationName'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-2">
+                <select class="form-control" data-placeholder="Select Release - 1" id="releaseID1" name="releaseID1">
+                    <option value=""></option>
+                </select>
+            </div>
+            <div class="form-group col-md-2">
+                <select class="form-control" data-placeholder="Select Release - 2" id="releaseID2" name="releaseID2">
+                    <option value=""></option>
+                </select>
+            </div>
+            <div class="form-group col-md-2">
+                <select class="form-control" data-placeholder="Select Release - 3" id="releaseID3" name="releaseID3">
+                    <option value=""></option>
+                </select>
+            </div>
+            <div class="form-group col-md-3">
+                <input class="form-control" id="transactionName" name="transactionName" placeholder="Search Transaction" title="Select Application to search transactions" style="height: 36px; font-size: 1rem;" type="text" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group col-md-12">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="showAllRowsCheckbox" name="showAllRowsCheckbox" />
+                    <label class="form-check-label" for="showAllRowsCheckbox">
+                        Show rows with all blank values for selected releases
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group col-md-1"></div>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col">
+                <div class="row">
+                    <div class="col text-center">
+                        <button class="btn btn-primary mr-2" type="submit">Search Records</button>
+                        <button class="btn btn-secondary" id="clearButton" type="button">Clear Records</button>
+                    </div>
+                    <div class="col-auto text-right">
+                        <a href="#" id="recent-searches-link">Recent Searches</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    <div id="alerts-container"></div>
+    <div class="card mt-3">
+        <div class="card-header">
+            Comparison Results
+        </div>
+        <div class="card-body" style="min-height: 500px; overflow-y: auto;">
+            <!-- Loader -->
+            <div class="loader"></div>
+            <table class="table table-striped table-bordered" id="comparisonTable">
+                <thead>
+                    <tr id="comparisonHeaders">
+                        <!-- Dynamic headers will be injected here -->
+                    </tr>
+                </thead>
+                <tbody id="comparisonBody">
+                    <!-- Dynamic comparison data will be injected here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="recentSearchesModal" tabindex="-1" role="dialog" aria-labelledby="recentSearchesModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="recentSearchesModalLabel">Recent Searches</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul id="recent-searches-list">
+                    <!-- Recent searches will be populated here -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Ensure script waits for document to be fully loaded
+    $(document).ready(function () {
+        // Initialize Select2 for all selects with data-placeholder attribute
+        $("select").each(function () {
+            var placeholder = $(this).data("placeholder");
+            $(this).select2({
+                placeholder: placeholder,
+                allowClear: true,
+                width: "100%", // Ensures Select2 uses full width
+            });
+        });
+
+        // Handle change event for applicationName select
+        $("#applicationName").change(function () {
+            var appName = $(this).val();
+            if (appName) {
+                // Fetch releases via AJAX
+                $.ajax({
+                    url: "/get_releases",
+                    method: "POST",
+                    data: { applicationName: appName },
+                    success: function (data) {
+                        // Populate release selects with fetched data
+                        $("#releaseID1, #releaseID2, #releaseID3").empty().append('<option value="">Select Release</option>');
+                        data.forEach(function (release) {
+                            $("#releaseID1, #releaseID2, #releaseID3").append('<option value="' + release + '">' + release + "</option>");
+                        });
+                    },
+                });
+            } else {
+                // Clear release selects if no applicationName selected
+                $("#releaseID1, #releaseID2, #releaseID3").empty().append('<option value="">Select Release</option>');
+            }
+        });
+
+        var dataTable; // Variable to hold the DataTable instance
+
+        // Example initial data
+        var initialData = {
+            columns: ["Transaction Name", "SLA", "TPS"],
+            records: [],
+        };
+
+        // Function to initialize or update DataTable
+        function initializeOrUpdateDataTable(data) {
+            // Clear existing headers and body
+            $("#comparisonHeaders, #comparisonBody").empty();
+
+            // Construct HTML headers
+            var headers = "";
+            data.columns.forEach(function (col) {
+                headers += "<th>" + col + "</th>";
+            });
+            $("#comparisonHeaders").html(headers);
+
+            // Construct HTML rows
+            var rows = "";
+            data.records.forEach(function (record) {
+                var row = "<tr><td>" + record.transactionName + "</td>";
+                data.columns.slice(1).forEach(function (col) {
+                    row += "<td>" + (record[col] || "-") + "</td>";
+                });
+                row += "</tr>";
+                rows += row;
+            });
+            $("#comparisonBody").html(rows);
+
+            if (!dataTable) {
+                // Initialize DataTable if not already initialized
+                dataTable = $("#comparisonTable").DataTable({
+                    searching: true, // Enable search box
+                    paging: true, // Enable pagination
+                    pageLength: 10, // Set default page size
+                    lengthChange: true, // Enable changing page size
+                    ordering: true, // Enable column sorting
+                    info: true, // Show table info
+                    autoWidth: true, // Disable automatic column width calculation
+                    responsive: true, // Make table responsive
+                    dom: "Blfrtip", // Include buttons for export
+                    buttons: [{ extend: "excel", className: "btn-secondary", text: "Export to Excel" }],
+                    columnDefs: [{ targets: "_all", width: "auto" }],
+                    language: {
+                        emptyTable: "No records are present",
+                    },
+                });
+            } else {
+                // Clear and redraw DataTable if already initialized
+                dataTable.clear().rows.add($("#comparisonBody tr")).draw();
+            }
+
+            // Clear alerts container after successful comparison
+            $("#alerts-container").empty();
+        }
+
+        // Initialize DataTable on page load with initialData
+        initializeOrUpdateDataTable(initialData);
+
+        // Handle form submission for comparison
+        $("#compareForm").submit(function (e) {
+            e.preventDefault();
+            // Show loader when search button is clicked
+            $(".loader").show();
+
+            // Validate form inputs
+            var releaseID1 = $("#releaseID1").val();
+            var releaseID2 = $("#releaseID2").val();
+            var releaseID3 = $("#releaseID3").val();
+            var applicationName = $("#applicationName").val();
+            var transactionName = $("#transactionName").val();
+            var showAllRows = $("#showAllRowsCheckbox").prop("checked");
+
+            if (!applicationName) {
+                showAlert("danger", "Application name is required.");
+                return;
+            }
+
+            if (!releaseID1 && !releaseID2 && !releaseID3) {
+                showAlert("danger", "Atleast one of Release IDs is required.");
+                return;
+            }
+
+            if (releaseID1 && (releaseID1 === releaseID2 || releaseID1 === releaseID3)) {
+                showAlert("danger", "Release IDs must be unique. Please select different releases.");
+                return;
+            }
+
+            if (releaseID2 && releaseID2 === releaseID3) {
+                showAlert("danger", "Release IDs must be unique. Please select different releases.");
+                return;
+            }
+
+            // Convert showAllRows boolean to string 'true' or 'false'
+            var showAllRowsString = showAllRows ? "true" : "false";
+
+            // Save search criteria in cookie'
+            var formData = {
+                applicationName: applicationName,
+                releaseID1: releaseID1,
+                releaseID2: releaseID2,
+                releaseID3: releaseID3,
+                transactionName: transactionName,
+                show_all_rows: showAllRowsString, // Include show_all_rows flag in form data
+            };
+
+            $.ajax({
+                type: "POST",
+                url: "/save_search/compare_search", // Dynamic cookie name for index page
+                contentType: "application/json",
+                data: JSON.stringify(formData),
+                success: function (response) {
+                    console.log("Search saved successfully.");
+                    // Handle success if needed
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error saving search:", error);
+                    // Handle error if needed
+                },
+            });
+
+            // Submit AJAX request to compare records
+            $.ajax({
+                url: "/compare_records",
+                method: "POST",
+                data: formData,
+                success: function (data) {
+                    console.log("Data received from server:", data);
+                    // Update DataTable with fetched data
+                    initializeOrUpdateDataTable(data);
+                },
+                error: function (err) {
+                    console.error("Error comparing records:", err);
+                    showAlert("danger", "Failed to compare records. Please try again later.");
+                },
+                complete: function () {
+                    // Hide loader when request is complete
+                    $(".loader").hide();
+                },
+            });
+        });
+
+        // Handle click event for clear button
+        $("#clearButton").click(function () {
+            // Reset form fields and elements
+            $("#compareForm")[0].reset(); // Resets form fields
+
+            // Reset Select2 dropdowns
+            $("#releaseID1, #releaseID2, #releaseID3, #applicationName").val(null).trigger("change");
+
+            // Clear comparison headers and body
+            $("#comparisonHeaders, #comparisonBody").empty();
+
+            // Destroy existing DataTable instance if it exists
+            // if ($.fn.DataTable.isDataTable('#comparisonTable')) {
+            //     $('#comparisonTable').DataTable().clear().destroy();
+            // }
+
+            // Initialize or reset DataTable with initial data or structure
+            var initialData = {
+                columns: ["Transaction Name", "Column 1", "Column 2"], // Adjust columns as per initial setup
+                records: [], // Initial empty records
+            };
+
+            // Reinitialize DataTable with initial configuration
+            initializeOrUpdateDataTable(initialData);
+        });
+
+        // Show modal and load recent searches
+        $("#recent-searches-link").click(function (event) {
+            event.preventDefault();
+            $("#recentSearchesModal").modal("show");
+            loadRecentSearches();
+        });
+
+        // Handle recent search click
+        $(document).on("click", ".recent-search-link", function (event) {
+            event.preventDefault();
+            var searchCriteria = $(this).data("search");
+            $("#applicationName").val(searchCriteria.applicationName).trigger("change");
+            // Set a timeout to ensure the release_id is updated after application_name change
+            setTimeout(function () {
+                $("#releaseID1").val(searchCriteria.releaseID1).trigger("change");
+                $("#releaseID2").val(searchCriteria.releaseID2).trigger("change");
+                $("#releaseID3").val(searchCriteria.releaseID3).trigger("change");
+            }, 1000); // Adjust the timeout as necessary
+            if (searchCriteria.transactionName === "None") {
+                $("#transactionName").val("");
+            } else {
+                $("#transactionName").val(searchCriteria.transactionName);
+            }
+            $("#recentSearchesModal").modal("hide");
+        });
+
+        function loadRecentSearches() {
+            // Load recent searches from the cookie
+            $.get("/recent_searches/compare_search", function (data) {
+                var recentSearchesList = $("#recent-searches-list");
+                recentSearchesList.empty();
+                if (data.length > 0) {
+                    data.forEach(function (search) {
+                        var listItem = `<li><a href="#" class="recent-search-link" data-search='${JSON.stringify(search)}'>${search.applicationName} - ${search.releaseID1} - ${search.releaseID2} - ${search.releaseID3} - ${
+                            search.transactionName
+                        }</a></li>`;
+                        recentSearchesList.append(listItem);
+                    });
+                } else {
+                    recentSearchesList.append("<li>No recent searches.</li>");
+                }
+            });
+        }
+
+        // Handle input event for transactionName field
+        $("#transactionName").on("input", function () {
+            var term = $(this).val();
+            var appName = $("#applicationName").val();
+            if (term.length >= 3 && appName) {
+                // Fetch transaction suggestions via AJAX
+                $.ajax({
+                    url: "/suggest_transactions",
+                    method: "POST",
+                    data: { term: term, applicationName: appName },
+                    success: function (data) {
+                        // Limit to a maximum of 10 results
+                        var limitedData = data.slice(0, 10);
+                        $("#transactionName").autocomplete({
+                            source: limitedData,
+                            minLength: 3,
+                            open: function (event, ui) {
+                                $(this).autocomplete("widget").css({
+                                    "background-color": "lightgray",
+                                    color: "black",
+                                });
+                                $(this).autocomplete("widget").addClass("custom-autocomplete");
+
+                                // Match the width of the input field
+                                var $input = $(this);
+                                var $autocomplete = $input.autocomplete("widget");
+
+                                // Use a slight delay to ensure positioning is applied correctly
+                                setTimeout(function () {
+                                    $autocomplete.width($input.outerWidth());
+                                    $autocomplete.position({
+                                        my: "left top",
+                                        at: "left bottom",
+                                        of: $input,
+                                    });
+
+                                    // Remove ARIA live region after opening autocomplete
+                                    removeAriaLiveRegion();
+                                }, 50);
+                            },
+                            messages: {
+                                noResults: "",
+                                results: function () {},
+                            },
+                            select: function (event, ui) {
+                                // Set the input value and close the autocomplete
+                                $(this).val(ui.item.value);
+
+                                // Remove ARIA live region after opening autocomplete
+                                removeAriaLiveRegion();
+                                return false; // Prevent the default behavior
+                            },
+                        });
+                    },
+                });
+            }
+        });
+
+        // Function to remove ARIA live region
+        function removeAriaLiveRegion() {
+            $('div[role="status"], div[role="alert"]').remove();
+        }
+
+        // Function to display alert
+        function showAlert(type, message) {
+            var alertElement = $(
+                '<div class="alert alert-' +
+                    type +
+                    ' alert-dismissible fade show" role="alert">' +
+                    message +
+                    '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                    '<span aria-hidden="true">&times;</span>' +
+                    "</button>" +
+                    "</div>"
+            );
+            $("#alerts-container").append(alertElement);
+            setTimeout(function () {
+                alertElement.alert("close"); // Close alert after 2 seconds
+            }, 2000);
+        }
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+{% block content %}
+<div class="container login-container">
+    <div class="row">
+        <div class="col-md-4">
+            <!-- Image column -->
+            <img src="your-image-url.jpg" alt="Login Image" class="login-image">
+        </div>
+        <div class="col-md-8">
+            <!-- Login form column -->
+            <div class="card">
+                <div class="card-header">
+                    Login
+                </div>
+                <div class="card-body login-form">
+                    <form id="loginForm" action="/login" method="POST">
+                        <div class="form-group">
+                            <label for="username">Username:</label>
+                            <input type="text" id="username" name="username" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password:</label>
+                            <input type="password" id="password" name="password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </form>
+                    <!-- Error message display (if any) -->
+                    {% if error %}
+                        <p style="color: red;">{{ error }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}

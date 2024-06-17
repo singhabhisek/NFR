@@ -1,0 +1,328 @@
+{% extends "base.html" %} {% block title %}Compare NFR{% endblock %} {% block content %}
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" />
+<style>
+    div.dt-buttons {
+        float: right;
+        margin: 0 5px;
+    }
+</style>
+<div class="container">
+    <div class="card card-header">
+        Search Criteria
+    </div>
+
+    <form class="card card-body" id="nfr-form" method="POST">
+        <div class="form-row form-inline">
+            <div class="form-group col-md-4">
+                <label for="application_name">Select Application:</label>&emsp;
+                <select class="select2 form-control" data-placeholder="Select Application" id="application_name" name="application_name" style="width: 200px;">
+                    <option value="">Select Application</option>
+                    {% for app in apps %}
+                    <option value="{{ app['applicationName'] }}">{{ app['applicationName'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="release_id">Select Release:</label>&emsp;
+                <select class="select2 form-control" data-placeholder="Select Release" id="release_id" name="release_id" style="width: 200px;">
+                    <option value="">Select Release</option>
+                </select>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="transaction_name">Transaction Name:</label>&emsp;
+                <input class="form-control" id="transaction_name" name="transaction_name" placeholder="Type transaction name" style="height: 36px; font-size: 1rem;" type="text" />
+            </div>
+        </div>
+        <br />
+
+        <div class="row justify-content-center">
+            <div class="col">
+                <div class="row">
+                    <div class="col text-center">
+                        <button class="btn btn-primary mr-2" id="search-records" type="submit">Search Records</button>
+                        <button class="btn btn-secondary" id="reset-form" type="button">Clear Records</button>
+                    </div>
+                    <div class="col-auto text-right">
+                        <a href="#" id="recent-searches-link">Recent Searches</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div id="alerts-container"></div>
+    <div class="card mt-3">
+        <div class="card-header">
+            Search Results
+        </div>
+        <!--        style="max-height: 2000px; overflow-y: auto;"-->
+        <div class="card-body" style="min-height: 500px; overflow-y: auto;">
+            <!-- Loader -->
+            <div class="loader"></div>
+            <table class="table table-bordered" id="discrepancyTable">
+                <thead>
+                    <tr>
+                        <th>Application Name</th>
+                        <th>Release ID</th>
+                        <th>Transaction Name</th>
+                        <th>SLA</th>
+                        <th>Backend Calls</th>
+                        <th>Compare</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in data %}
+                    <tr>
+                        <td>{{ row.ApplicationName }}</td>
+                        <td>{{ row.releaseID }}</td>
+                        <td>{{ row.transactionName }}</td>
+                        <td>{{ row.SLA }}</td>
+                        <td>
+                            {{ row.backendCall | safe }}
+                        </td>
+                        <td>{{ row.Compare | safe }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div aria-hidden="true" aria-labelledby="recentSearchesModalLabel" class="modal fade" id="recentSearchesModal" role="dialog" tabindex="-1">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="recentSearchesModalLabel">Recent Searches</h5>
+                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul id="recent-searches-list">
+                    <!-- Recent searches will be populated here -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal" type="button">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function resetForm() {
+        $("#discrepancyForm")[0].reset();
+        $("#discrepancyTable").DataTable().clear().draw();
+        $("#tableContainer").html("<p>No records were found.</p>");
+    }
+
+    $(document).ready(function () {
+        var initialAppName = "{{ request.form.get('application_name') }}";
+        var initialReleaseId = "{{ request.form.get('release_id') }}";
+        var initialTransactionName = "{{ request.form.get('transaction_name') }}";
+        var transactionName = $("#transaction_name").val();
+
+        // Set initial values
+        if (initialAppName) {
+            $("#application_name").val(initialAppName).trigger("change");
+        }
+        if (initialReleaseId) {
+            $("#release_id").val(initialReleaseId);
+        }
+        if (!initialTransactionName || initialTransactionName === "None") {
+            $("#transaction_name").val(""); // Set to blank if falsy or 'None'
+        } else {
+            $("#transaction_name").val(initialTransactionName); // Set to actual value
+        }
+
+        $("#discrepancyTable").DataTable({
+            searching: true, // Enable search box
+            paging: true, // Enable pagination
+            pageLength: 10, // Set default page size
+            lengthChange: true, // Enable changing page size
+            ordering: true, // Enable column sorting
+            info: true, // Show table info
+            autoWidth: true, // Disable automatic column width calculation
+            responsive: true, // Make table responsive
+            dom: "Blfrtip", // Include buttons for export
+            buttons: [{ extend: "excel", className: "btn-secondary", text: "Export to Excel" }],
+            columnDefs: [{ targets: "_all", width: "auto" }],
+            language: {
+                emptyTable: "No records are present",
+            },
+        });
+        // Load releases based on application
+        $("#application_name").change(function () {
+            var appName = $(this).val();
+            $.ajax({
+                url: "/get_releases",
+                type: "POST",
+                data: { applicationName: appName },
+                success: function (data) {
+                    console.log(data);
+                    var releaseDropdown = $("#release_id");
+                    releaseDropdown.empty().append('<option value="">Select Release</option>');
+                    data.forEach(function (release) {
+                        releaseDropdown.append('<option value="' + release + '">' + release + "</option>");
+                    });
+                },
+            });
+        });
+
+        // Form submission handling
+        $("#nfr-form").submit(function (event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            // Validate form inputs
+            var applicationName = $("#application_name").val();
+            var releaseID = $("#release_id").val();
+            var transactionName = $("#transaction_name").val();
+
+            if (!applicationName) {
+                showAlert("danger", "Application name is required.");
+                return;
+            }
+            if (!releaseID && !transactionName) {
+                showAlert("danger", "Either release ID or transaction name is required.");
+                return;
+            }
+            // Show loader when search button is clicked
+            $(".loader").show();
+            var formData = {
+                application_name: $("#application_name").val(),
+                release_id: $("#release_id").val(),
+                transaction_name: $("#transaction_name").val(),
+            };
+
+            // Show loading overlay or message
+            $("#loadingOverlay").show();
+
+            // Save search criteria in cookie
+            $.ajax({
+                type: "POST",
+                url: "/save_search/discrepancy_search", // Dynamic cookie name for index page
+                contentType: "application/json",
+                data: JSON.stringify(formData),
+                success: function (response) {
+                    console.log("Search saved successfully.");
+                    // Handle success if needed
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error saving search:", error);
+                    // Handle error if needed
+                },
+            });
+
+            // Send AJAX request to Flask backend
+            $.ajax({
+                type: "POST",
+                url: "/discrepancy",
+                data: formData,
+                success: function (data) {
+                    console.log("Received data:", data);
+                    // Hide loading overlay or message
+                    $("#loadingOverlay").hide();
+                    // Clear existing DataTable rows
+                    $("#discrepancyTable").DataTable().clear().draw();
+                    // Update table with received data
+                    if (data && Array.isArray(data) && data.length > 0) {
+                        $("#discrepancyTable").DataTable().clear().draw();
+                        data.forEach(function (row) {
+                            $("#discrepancyTable")
+                                .DataTable()
+                                .row.add([row.ApplicationName, row.releaseID, row.transactionName, row.SLA, `<i class="fa fa-info-circle"></i><span class="backend-details">${row.backendCall}</span>`, getComparisonIcon(row.Compare)])
+                                .draw(false);
+                        });
+                    } else {
+                        $("#tableContainer").html("<p>No records found.</p>");
+                    }
+                },
+                error: function (xhr, status, error) {
+                    //console.error('Error:', error);
+                    showAlert("danger", "Error: " + error);
+                    // Hide loading overlay or message on error
+                    $("#loadingOverlay").hide();
+                },
+                complete: function () {
+                    // Hide loader when request is complete
+                    $(".loader").hide();
+                },
+            });
+        });
+        // Function to display alert
+        function showAlert(type, message) {
+            var alertElement = $(
+                '<div class="alert alert-' +
+                    type +
+                    ' alert-dismissible fade show" role="alert">' +
+                    message +
+                    '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                    '<span aria-hidden="true">&times;</span>' +
+                    "</button>" +
+                    "</div>"
+            );
+            $("#alerts-container").append(alertElement);
+            setTimeout(function () {
+                alertElement.alert("close"); // Close alert after 2 seconds
+            }, 2000);
+        }
+
+        // Show modal and load recent searches
+        $("#recent-searches-link").click(function (event) {
+            event.preventDefault();
+            $("#recentSearchesModal").modal("show");
+            loadRecentSearches();
+        });
+
+        // Handle recent search click
+        $(document).on("click", ".recent-search-link", function (event) {
+            event.preventDefault();
+            var searchCriteria = $(this).data("search");
+            $("#application_name").val(searchCriteria.application_name).trigger("change");
+            // Set a timeout to ensure the release_id is updated after application_name change
+            setTimeout(function () {
+                $("#release_id").val(searchCriteria.release_id).trigger("change");
+            }, 1000); // Adjust the timeout as necessary
+            if (searchCriteria.transaction_name === "None") {
+                $("#transaction_name").val("");
+            } else {
+                $("#transaction_name").val(searchCriteria.transaction_name);
+            }
+            $("#recentSearchesModal").modal("hide");
+        });
+
+        function loadRecentSearches() {
+            // Load recent searches from the cookie
+            $.get("/recent_searches/discrepancy_search", function (data) {
+                var recentSearchesList = $("#recent-searches-list");
+                recentSearchesList.empty();
+                if (data.length > 0) {
+                    data.forEach(function (search) {
+                        var listItem = `<li><a href="#" class="recent-search-link" data-search='${JSON.stringify(search)}'>${search.application_name} - ${search.release_id} - ${search.transaction_name}</a></li>`;
+                        recentSearchesList.append(listItem);
+                    });
+                } else {
+                    recentSearchesList.append("<li>No recent searches.</li>");
+                }
+            });
+        }
+
+        // Function to get comparison icon
+        function getComparisonIcon(compare) {
+            switch (compare) {
+                case "Higher":
+                    return '<i class="fas fa-arrow-up red-icon" title="Higher"></i>';
+                case "Lower":
+                    return '<i class="fas fa-arrow-down green-icon" title="Lower"></i>';
+                case "Equal":
+                    return '<i class="fas fa-exchange-alt amber-icon" title="Equal"></i>';
+                default:
+                    return '<i class="fas fa-exchange-alt amber-icon" title="Equal"></i>';
+            }
+        }
+    });
+</script>
+
+{% endblock %}

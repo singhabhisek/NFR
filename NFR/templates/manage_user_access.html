@@ -1,0 +1,171 @@
+{% extends "base.html" %} {% block title %}Dashboard{% endblock %}
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>User Access Management</title>
+
+{% block content %}
+<div class="container">
+    <h1>User Access Management</h1>
+
+    <button id="addRecordBtn" class="btn btn-primary mb-3">Add New Record</button>
+
+    <table id="userTable" class="display">
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user[0] }}</td>
+                <td>{{ user[1] }}</td>
+                <td>{{ user[2] }}</td>
+                <td>
+                    <button class="edit-btn btn btn-info" data-userid="{{ user[0] }}" data-toggle="modal" data-target="#editModal">Edit</button>
+                    <button class="delete-btn btn btn-danger" data-userid="{{ user[0] }}">Delete</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Add User Modal -->
+    <div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addModalLabel">Add New User</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm">
+                        <div class="form-group">
+                            <label for="addUserid">User ID:</label>
+                            <input type="text" class="form-control" id="addUserid" name="userid" />
+                        </div>
+                        <div class="form-group">
+                            <label for="addRole">Role:</label>
+                            <select class="form-control" id="addRole" name="role">
+                                <option value="admin">Admin</option>
+                                <option value="poweruser">Power User</option>
+                                <option value="user">User</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="addStatus">Status:</label>
+                            <input type="text" class="form-control" id="addStatus" name="status" />
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit User</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <div class="form-group">
+                            <label for="editUserid">User ID:</label>
+                            <input type="text" class="form-control" id="editUserid" name="userid" readonly />
+                        </div>
+                        <div class="form-group">
+                            <label for="editRole">Role:</label>
+                            <select class="form-control" id="editRole" name="role">
+                                <option value="admin">Admin</option>
+                                <option value="poweruser">Power User</option>
+                                <option value="user">User</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editStatus">Status:</label>
+                            <input type="text" class="form-control" id="editStatus" name="status" />
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        // Initialize DataTable
+        var table = $("#userTable").DataTable();
+
+        // Add Record button click handler
+        $("#addRecordBtn").click(function () {
+            $("#addModal").modal("show");
+        });
+
+        // Edit button click handler
+        $("#userTable").on("click", ".edit-btn", function () {
+            var userId = $(this).data("userid");
+            $("#editUserid").val(userId);
+
+            // Load current role and status into the edit form
+            var rowData = table.row($(this).closest("tr")).data();
+            $("#editRole").val(rowData[1]); // Role column
+            $("#editStatus").val(rowData[2]); // Status column
+
+            $("#editModal").modal("show");
+        });
+
+        // Delete button click handler
+        $("#userTable").on("click", ".delete-btn", function () {
+            var userId = $(this).data("userid");
+            var confirmDelete = confirm("Are you sure you want to delete user " + userId + "?");
+            if (confirmDelete) {
+                // Simulate deleting the user (replace with actual AJAX call)
+                table.row($(this).closest("tr")).remove().draw();
+            }
+        });
+
+        // Handle form submission for adding user access
+        $("#addUserForm").submit(function (event) {
+            event.preventDefault();
+            var formData = {
+                userid: $("#addUserid").val(),
+                role: $("#addRole").val(),
+                status: $("#addStatus").val(),
+            };
+
+            // Example: Simulate adding user (replace with actual AJAX call)
+            console.log("Adding user:", formData);
+            alert("Feature not implemented in demo.");
+            $("#addModal").modal("hide");
+        });
+
+        // Handle form submission for editing user access
+        $("#editUserForm").submit(function (event) {
+            event.preventDefault();
+            var formData = {
+                userid: $("#editUserid").val(),
+                role: $("#editRole").val(),
+                status: $("#editStatus").val(),
+            };
+
+            // Example: Simulate updating user (replace with actual AJAX call)
+            console.log("Updating user:", formData);
+            alert("Feature not implemented in demo.");
+            $("#editModal").modal("hide");
+        });
+    });
+</script>
+{% endblock %}

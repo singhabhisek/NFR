@@ -1,0 +1,45 @@
+2024-06-17 12:21:21,882 ERROR: Missing mandatory columns: TransactionName
+2024-06-17 12:21:21,882 ERROR: Error processing file: Missing mandatory columns: TransactionName
+2024-06-17 12:32:03,200 ERROR: [UPLOAD] Error processing file: Missing mandatory columns: TransactionName
+2024-06-17 15:37:04,079 ERROR: [PROCESS_EXCEL_FILE] Missing mandatory columns: SLA, TPS, Comments
+2024-06-17 15:37:04,079 ERROR: [UPLOAD] Error processing file: Missing mandatory columns: SLA, TPS, Comments
+2024-06-17 15:37:23,030 ERROR: [PROCESS_EXCEL_FILE] Missing mandatory columns: SLA, TPS, Comments
+2024-06-17 15:37:23,030 ERROR: [UPLOAD] Error processing file: Missing mandatory columns: SLA, TPS, Comments
+2024-06-17 15:38:09,878 ERROR: [UPLOAD] Error processing file: 'Comments'
+2024-06-17 15:40:29,132 ERROR: [UPLOAD] Error processing file: cannot access local variable 'SLA' where it is not associated with a value
+2024-06-17 15:41:20,445 ERROR: [PROCESS_EXCEL_FILE] Error processing row 2: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,446 ERROR: [PROCESS_EXCEL_FILE] Error processing row 3: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,447 ERROR: [PROCESS_EXCEL_FILE] Error processing row 4: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,448 ERROR: [PROCESS_EXCEL_FILE] Error processing row 5: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,449 ERROR: [PROCESS_EXCEL_FILE] Error processing row 6: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,449 ERROR: [PROCESS_EXCEL_FILE] Error processing row 7: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,450 ERROR: [PROCESS_EXCEL_FILE] Error processing row 8: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,450 ERROR: [PROCESS_EXCEL_FILE] Error processing row 9: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,451 ERROR: [PROCESS_EXCEL_FILE] Error processing row 10: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,452 ERROR: [PROCESS_EXCEL_FILE] Error processing row 11: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,452 ERROR: [PROCESS_EXCEL_FILE] Error processing row 12: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,452 ERROR: [PROCESS_EXCEL_FILE] Error processing row 13: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,453 ERROR: [PROCESS_EXCEL_FILE] Error processing row 14: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,454 ERROR: [PROCESS_EXCEL_FILE] Error processing row 15: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,454 ERROR: [PROCESS_EXCEL_FILE] Error processing row 16: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,454 ERROR: [PROCESS_EXCEL_FILE] Error processing row 17: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,455 ERROR: [PROCESS_EXCEL_FILE] Error processing row 18: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:20,455 ERROR: [PROCESS_EXCEL_FILE] Error processing row 19: type object 'datetime.datetime' has no attribute 'datetime'
+2024-06-17 15:41:47,351 ERROR: [PROCESS_EXCEL_FILE] Error processing row 2: 11 values for 9 columns
+2024-06-17 15:41:47,351 ERROR: [PROCESS_EXCEL_FILE] Error processing row 3: 11 values for 9 columns
+2024-06-17 15:41:47,352 ERROR: [PROCESS_EXCEL_FILE] Error processing row 4: 11 values for 9 columns
+2024-06-17 15:41:47,352 ERROR: [PROCESS_EXCEL_FILE] Error processing row 5: 11 values for 9 columns
+2024-06-17 15:41:47,352 ERROR: [PROCESS_EXCEL_FILE] Error processing row 6: 11 values for 9 columns
+2024-06-17 15:41:47,352 ERROR: [PROCESS_EXCEL_FILE] Error processing row 7: 11 values for 9 columns
+2024-06-17 15:41:47,353 ERROR: [PROCESS_EXCEL_FILE] Error processing row 8: 11 values for 9 columns
+2024-06-17 15:41:47,353 ERROR: [PROCESS_EXCEL_FILE] Error processing row 9: 11 values for 9 columns
+2024-06-17 15:41:47,353 ERROR: [PROCESS_EXCEL_FILE] Error processing row 10: 11 values for 9 columns
+2024-06-17 15:41:47,353 ERROR: [PROCESS_EXCEL_FILE] Error processing row 11: 11 values for 9 columns
+2024-06-17 15:41:47,354 ERROR: [PROCESS_EXCEL_FILE] Error processing row 12: 11 values for 9 columns
+2024-06-17 15:41:47,354 ERROR: [PROCESS_EXCEL_FILE] Error processing row 13: 11 values for 9 columns
+2024-06-17 15:41:47,354 ERROR: [PROCESS_EXCEL_FILE] Error processing row 14: 11 values for 9 columns
+2024-06-17 15:41:47,354 ERROR: [PROCESS_EXCEL_FILE] Error processing row 15: 11 values for 9 columns
+2024-06-17 15:41:47,354 ERROR: [PROCESS_EXCEL_FILE] Error processing row 16: 11 values for 9 columns
+2024-06-17 15:41:47,355 ERROR: [PROCESS_EXCEL_FILE] Error processing row 17: 11 values for 9 columns
+2024-06-17 15:41:47,355 ERROR: [PROCESS_EXCEL_FILE] Error processing row 18: 11 values for 9 columns
+2024-06-17 15:41:47,355 ERROR: [PROCESS_EXCEL_FILE] Error processing row 19: 11 values for 9 columns

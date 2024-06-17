@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Upload NFR{% endblock %}
+
+{% block styles %}
+    <!-- Link to external CSS file -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <style type="text/css">
+    /* file upload button */
+    input[type="file"]::file-selector-button {
+        border-radius: 4px;
+        padding: 0 16px;
+        height: 40px;
+        cursor: pointer;
+        background-color: lightgray;
+        border: 1px solid rgba(0, 0, 0, 0.16);
+        box-shadow: 0px 1px 0px rgba(0, 0, 0, 0.05);
+        margin-right: 16px;
+        transition: background-color 200ms;
+    }
+</style>
+    <h2>File Upload Screen</h2>
+    <p>Please upload the NFR updated template to store in the database. You can also download the sample NFR Template from <a target="_blank" href="downloads/template.xlsx">here</a>. After uploading, go to the <a href="/">Dashboard</a> to view the uploaded data.</p>
+
+    <form id="upload-form" method="post" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="file">Choose File</label>
+            <p style="background-color: antiquewhite; border-radius: 15px; padding: 7px;">
+            <input type="file" id="file" name="file" class="form-control-file" accept=".xlsx" required>
+            </p>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload</button>
+    </form>
+    <!-- Loader -->
+            <div class="loader"></div>
+    <h2>Logs</h2>
+
+    <br>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <ul class="flashes">
+            {% for category, message in messages %}
+                <strong class="{{ category }}">{{ message }}</strong>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+    <hr/>
+    {% if summary %}
+    <strong>Summary:</strong>
+    <ul>
+        <li>Total records processed: {{ summary.total }}</li>
+        <li>Inserted records: {{ summary.inserted }}</li>
+        <li>Updated records: {{ summary.updated }}</li>
+        <li>Passed records: {{ summary.passed }}</li>
+        <li>Failed records: {{ summary.failed }}</li>
+    </ul>
+    {% endif %}
+
+    <strong>
+        <button class="btn btn-primary" type="button" data-toggle="collapse" data-target="#detailsCollapse" aria-expanded="false" aria-controls="detailsCollapse">
+            Show Details
+        </button>
+    </strong>
+
+    <div class="collapse" id="detailsCollapse">
+        <div class="card card-body">
+            <strong>Details:</strong>
+            <ul>
+                {% for log in logs %}
+                    <li>{{ log }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
