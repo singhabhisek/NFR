@@ -106,65 +106,95 @@
 
 <script>
     $(document).ready(function () {
-        // Initialize DataTable
-        var table = $("#userTable").DataTable();
+        var table = $('#userTable').DataTable();
 
         // Add Record button click handler
-        $("#addRecordBtn").click(function () {
-            $("#addModal").modal("show");
+        $('#addRecordBtn').click(function () {
+            $('#addModal').modal('show');
         });
 
         // Edit button click handler
-        $("#userTable").on("click", ".edit-btn", function () {
-            var userId = $(this).data("userid");
-            $("#editUserid").val(userId);
+        $('#userTable').on('click', '.edit-btn', function () {
+            var userId = $(this).data('userid');
+            $('#editUserid').val(userId);
 
             // Load current role and status into the edit form
-            var rowData = table.row($(this).closest("tr")).data();
-            $("#editRole").val(rowData[1]); // Role column
-            $("#editStatus").val(rowData[2]); // Status column
+            var rowData = table.row($(this).closest('tr')).data();
+            $('#editRole').val(rowData[1]); // Role column
+            $('#editStatus').val(rowData[2]); // Status column
 
-            $("#editModal").modal("show");
+            $('#editModal').modal('show');
         });
 
         // Delete button click handler
-        $("#userTable").on("click", ".delete-btn", function () {
-            var userId = $(this).data("userid");
-            var confirmDelete = confirm("Are you sure you want to delete user " + userId + "?");
+        $('#userTable').on('click', '.delete-btn', function () {
+            var userId = $(this).data('userid');
+            var confirmDelete = confirm('Are you sure you want to delete user ' + userId + '?');
             if (confirmDelete) {
                 // Simulate deleting the user (replace with actual AJAX call)
-                table.row($(this).closest("tr")).remove().draw();
+                $.ajax({
+                    url: '/delete_user_access/' + userId,
+                    type: 'DELETE',
+                    success: function (response) {
+                        if (response.success) {
+                            table.row($(this).closest('tr')).remove().draw();
+                        } else {
+                            alert('Failed to delete user');
+                        }
+                    }
+                });
             }
         });
 
         // Handle form submission for adding user access
-        $("#addUserForm").submit(function (event) {
+        $('#addUserForm').submit(function (event) {
             event.preventDefault();
             var formData = {
-                userid: $("#addUserid").val(),
-                role: $("#addRole").val(),
-                status: $("#addStatus").val(),
+                userid: $('#addUserid').val(),
+                role: $('#addRole').val(),
+                status: $('#addStatus').val()
             };
 
-            // Example: Simulate adding user (replace with actual AJAX call)
-            console.log("Adding user:", formData);
-            alert("Feature not implemented in demo.");
-            $("#addModal").modal("hide");
+            // Simulate adding user (replace with actual AJAX call)
+            $.ajax({
+                url: '/add_user_access',
+                type: 'POST',
+                data: formData,
+                success: function (response) {
+                    if (response.success) {
+                        $('#addModal').modal('hide');
+                        table.row.add([formData.userid, formData.role, formData.status]).draw();
+                    } else {
+                        alert('Failed to add user');
+                    }
+                }
+            });
         });
 
         // Handle form submission for editing user access
-        $("#editUserForm").submit(function (event) {
+        $('#editUserForm').submit(function (event) {
             event.preventDefault();
             var formData = {
-                userid: $("#editUserid").val(),
-                role: $("#editRole").val(),
-                status: $("#editStatus").val(),
+                userid: $('#editUserid').val(),
+                role: $('#editRole').val(),
+                status: $('#editStatus').val()
             };
 
-            // Example: Simulate updating user (replace with actual AJAX call)
-            console.log("Updating user:", formData);
-            alert("Feature not implemented in demo.");
-            $("#editModal").modal("hide");
+            // Simulate updating user (replace with actual AJAX call)
+            $.ajax({
+                url: '/edit_user_access/' + formData.userid,
+                type: 'PUT',
+                data: formData,
+                success: function (response) {
+                    if (response.success) {
+                        $('#editModal').modal('hide');
+                        var index = table.row($('#userTable').find('tr.selected')).index();
+                        table.row(index).data([formData.userid, formData.role, formData.status]).draw();
+                    } else {
+                        alert('Failed to update user');
+                    }
+                }
+            });
         });
     });
 </script>
