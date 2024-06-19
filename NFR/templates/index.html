@@ -10,6 +10,77 @@
         margin: 0 5px;
     }
 </style>
+<style>
+    /* Custom CSS for purple variant */
+    .card-header, .modal-header, .btn-primary, .custom-button {
+        background-color: #6f42c1; /* Purple background */
+        color: #fff; /* White text color */
+    }
+
+    .btn-secondary {
+        background-color: #6c757d; /* Dark gray background */
+        color: #fff; /* White text color */
+    }
+
+    .card {
+        border: 1px solid #6f42c1; /* Purple border */
+    }
+
+    .table-bordered th, .table-bordered td {
+        border-color: #6f42c1; /* Purple border for table */
+    }
+
+    .modal-content {
+        border: 1px solid #6f42c1; /* Purple border for modals */
+    }
+
+    /* Custom CSS for table */
+    .table-bordered {
+        border-color: #6f42c1; /* Purple border */
+    }
+
+    .table-bordered th, .table-bordered td {
+        border-color: #6f42c1; /* Purple border */
+    }
+
+    .table thead th {
+        background-color: #9c6cc1; /* Light purple for header row */
+        color: #fff; /* White text color */
+    }
+
+    .table tbody tr:nth-child(odd) {
+        background-color: #f3e5f5; /* Lightest purple for odd rows */
+    }
+
+    .table tbody tr:hover {
+        background-color: #e2d8e6; /* Gray on hovering */
+    }
+
+</style>
+<style>
+    /* Custom CSS for sidebar */
+    .sidebar {
+        background-color: #9c6cc1; /* Light purple background */
+        color: #fff; /* White text color */
+        padding-top: 20px;
+        min-height: 100vh; /* Full height of viewport */
+    }
+
+    .sidebar a {
+        color: #fff; /* White text color for links */
+    }
+
+    .sidebar a:hover {
+        color: #f8f9fa; /* Light gray for link hover */
+        text-decoration: none; /* Remove underline */
+    }
+
+    .sidebar .active {
+        background-color: #6f42c1; /* Purple background for active link */
+    }
+</style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.0/xlsx.full.min.js"></script>
+
 <div class="container">
     <div class="card card-header">
         Search Criteria
@@ -276,8 +347,20 @@
                 autoWidth: false,       // Disable automatic column width calculation
                 responsive: true,       // Make table responsive
                 dom: 'Blfrtip', // Include buttons for export
+<!--                buttons: [-->
+<!--                    { extend: 'excel', className: 'btn-secondary', text:'Export to Excel' }-->
+<!--                ],-->
                 buttons: [
-                    { extend: 'excel', className: 'btn-secondary', text:'Export to Excel' }
+                    {
+                        text: 'Export to Excel',
+                        action: function ( e, dt, node, config ) {
+<!--                            exportToExcel();-->
+
+                        },attr: {
+                    id: 'export-excel' // Add ID attribute to the button
+                },
+                className: 'btn btn-primary custom-button' // Button styling
+                    }
                 ],
                 columnDefs: [
                    {
@@ -287,6 +370,40 @@
                     { orderable: false, targets: [7] } // Disable ordering on action buttons column
                 ]
             });
+
+            // Custom styling for the button
+$('.custom-button').css({
+    'background-color': 'blue',    // Set background color to green
+    'color': 'white'                 // Set text color (foreground color) to blue
+});
+
+            function exportToExcel() {
+                // Create a new workbook and worksheet
+                var wb = XLSX.utils.book_new();
+                var ws_data = [];
+
+                // Get table headers
+                var headers = $('#example thead th').map(function() {
+                    return $(this).text().trim();
+                }).get();
+                ws_data.push(headers);
+
+                // Get table data
+                $('#example tbody tr').each(function() {
+                    var rowData = [];
+                    $(this).find('td').each(function() {
+                        rowData.push($(this).text().trim());
+                    });
+                    ws_data.push(rowData);
+                });
+
+                // Convert data to worksheet and append to workbook
+                var ws = XLSX.utils.aoa_to_sheet(ws_data);
+                XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+                // Write workbook to file
+                XLSX.writeFile(wb, 'export.xlsx');
+            }
 
             // Search records
             $('#search-records').click(function() {
@@ -587,12 +704,12 @@
                 // Create a new workbook and worksheet
                 var wb = XLSX.utils.book_new();
                 var ws_data = [];
-        
+
                 // Get table headers and determine which columns to exclude
                 var headers = $('#records-table th');
                 var headerRow = [];
                 var excludeIndices = [];
-        
+
                 headers.each(function(index) {
                     var headerText = $(this).text().trim();
                     if (headerText === 'ID' || headerText === 'Actions') {
@@ -602,7 +719,7 @@
                     }
                 });
                 ws_data.push(headerRow);
-        
+
                 // Get table rows and exclude the specified columns
                 $('#records-table tbody tr').each(function() {
                     var rowData = [];
@@ -613,11 +730,11 @@
                     });
                     ws_data.push(rowData);
                 });
-        
+
                 // Convert the data to worksheet and append to the workbook
                 var ws = XLSX.utils.aoa_to_sheet(ws_data);
                 XLSX.utils.book_append_sheet(wb, ws, 'Records');
-        
+
                 // Write the workbook to a file
                 XLSX.writeFile(wb, 'Records.xlsx');
             });
