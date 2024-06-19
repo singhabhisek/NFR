@@ -1,50 +1,57 @@
+# Endpoint to handle adding new user access
 @app.route('/add_user_access', methods=['POST'])
 def add_user_access():
+    userid = request.form['userid']
+    role = request.form['role']
+    status = request.form['status']
+
+    conn = connect_db()
+    cursor = conn.cursor()
     try:
-        userid = request.form['userid']
-        role = request.form['role']
-        status = request.form['status']
+        cursor.execute('INSERT INTO UserAccess (userID, role, status) VALUES (?, ?, ?)', (userid, role, status))
+        conn.commit()
+        message = {'success': True}
+    except sqlite3.IntegrityError:
+        message = {'error': 'User ID already exists.'}
+    finally:
+        conn.close()
 
-        # Simulate adding user (replace with actual database operation)
-        users.append((userid, role, status))
-
-        return jsonify({'success': True})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+    return jsonify(message)
 
 # Endpoint to handle editing user access
 @app.route('/edit_user_access/<userid>', methods=['PUT'])
 def edit_user_access(userid):
+    role = request.form['role']
+    status = request.form['status']
+
+    conn = connect_db()
+    cursor = conn.cursor()
     try:
-        role = request.form['role']
-        status = request.form['status']
+        cursor.execute('UPDATE UserAccess SET role = ?, status = ? WHERE userID = ?', (role, status, userid))
+        conn.commit()
+        message = {'success': True}
+    except sqlite3.Error:
+        message = {'error': 'Failed to update user.'}
+    finally:
+        conn.close()
 
-        # Simulate updating user (replace with actual database operation)
-        for i, user in enumerate(users):
-            if user[0] == userid:
-                users[i] = (userid, role, status)
-                break
-
-        return jsonify({'success': True})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+    return jsonify(message)
 
 # Endpoint to handle deleting user access
 @app.route('/delete_user_access/<userid>', methods=['DELETE'])
 def delete_user_access(userid):
+    conn = connect_db()
+    cursor = conn.cursor()
     try:
-        # Simulate deleting user (replace with actual database operation)
-        for i, user in enumerate(users):
-            if user[0] == userid:
-                del users[i]
-                break
+        cursor.execute('DELETE FROM UserAccess WHERE userID = ?', (userid,))
+        conn.commit()
+        message = {'success': True}
+    except sqlite3.Error:
+        message = {'error': 'Failed to delete user.'}
+    finally:
+        conn.close()
 
-        return jsonify({'success': True})
-
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+    return jsonify(message)
     
     ==
     
