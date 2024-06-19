@@ -1,4 +1,54 @@
-{% extends "base.html" %} {% block title %}Dashboard{% endblock %}
+@app.route('/add_user_access', methods=['POST'])
+def add_user_access():
+    try:
+        userid = request.form['userid']
+        role = request.form['role']
+        status = request.form['status']
+
+        # Simulate adding user (replace with actual database operation)
+        users.append((userid, role, status))
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# Endpoint to handle editing user access
+@app.route('/edit_user_access/<userid>', methods=['PUT'])
+def edit_user_access(userid):
+    try:
+        role = request.form['role']
+        status = request.form['status']
+
+        # Simulate updating user (replace with actual database operation)
+        for i, user in enumerate(users):
+            if user[0] == userid:
+                users[i] = (userid, role, status)
+                break
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+# Endpoint to handle deleting user access
+@app.route('/delete_user_access/<userid>', methods=['DELETE'])
+def delete_user_access(userid):
+    try:
+        # Simulate deleting user (replace with actual database operation)
+        for i, user in enumerate(users):
+            if user[0] == userid:
+                del users[i]
+                break
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+    
+    ==
+    
+    {% extends "base.html" %} {% block title %}Dashboard{% endblock %}
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>User Access Management</title>
