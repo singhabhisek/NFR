@@ -1,0 +1,1391 @@
+Sub SortAndCalculateDifference()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim rng As Range
+    Dim diffCol As Range
+    
+    ' Set the worksheet where data is located
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Change "Sheet1" to your actual sheet name
+    
+    ' Find the last row in column A
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' Sort column A from row 5 to lastRow
+    Set rng = ws.Range("A5:A" & lastRow)
+    ws.Sort.SortFields.Clear
+    ws.Sort.SortFields.Add Key:=rng, SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+    With ws.Sort
+        .SetRange rng
+        .Header = xlNo
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+    
+    ' Add a column after the fifth column to calculate difference between columns D and E
+    ws.Columns("F:F").Insert Shift:=xlToRight
+    ws.Cells(4, 6).Value = "Difference"
+    Set diffCol = ws.Range("F5:F" & lastRow)
+    diffCol.FormulaR1C1 = "=RC[-2]-RC[-1]"
+    
+    ' Apply conditional formatting to column F based on whether the difference is positive or negative
+    Dim positiveCondition As FormatCondition
+    Dim negativeCondition As FormatCondition
+    
+    ' Define positive condition (greater than or equal to 0)
+    Set positiveCondition = diffCol.FormatConditions.Add(Type:=xlCellValue, Operator:=xlGreaterEqual, Formula1:="0")
+    With positiveCondition.Interior
+        .Color = RGB(255, 0, 0) ' Red color
+    End With
+    
+    ' Define negative condition (less than 0)
+    Set negativeCondition = diffCol.FormatConditions.Add(Type:=xlCellValue, Operator:=xlLess, Formula1:="0")
+    With negativeCondition.Interior
+        .Color = RGB(0, 255, 0) ' Green color (you can change to your desired negative color)
+    End With
+    
+    ' Adjust column widths if necessary
+    ws.Columns("A:F").AutoFit
+    
+    ' Clean up
+    Set ws = Nothing
+    Set rng = Nothing
+    Set diffCol = Nothing
+    Set positiveCondition = Nothing
+    Set negativeCondition = Nothing
+End Sub
+
+Sub SortAndCalculateDifference()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim rng As Range
+    Dim diffCol As Range
+    Dim i As Long
+    
+    ' Set the worksheet where data is located
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Change "Sheet1" to your actual sheet name
+    
+    ' Find the last row in column A
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' Sort column A from row 5 to lastRow
+    Set rng = ws.Range("A5:A" & lastRow)
+    ws.Sort.SortFields.Clear
+    ws.Sort.SortFields.Add Key:=rng, SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+    With ws.Sort
+        .SetRange rng
+        .Header = xlNo
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+    
+    ' Add a column after the fifth column to calculate difference between columns D and E
+    ws.Columns("F:F").Insert Shift:=xlToRight
+    ws.Cells(4, 6).Value = "Difference"
+    
+    ' Calculate difference for each row from row 5 to lastRow
+    For i = 5 To lastRow
+        If IsNumeric(ws.Cells(i, 4).Value) And IsNumeric(ws.Cells(i, 5).Value) Then
+            ws.Cells(i, 6).Value = ws.Cells(i, 4).Value - ws.Cells(i, 5).Value
+        Else
+            ' Handle non-numeric values or errors if needed
+            ' For example, you can set ws.Cells(i, 6).Value = "Error" or something else
+        End If
+    Next i
+    
+    ' Apply conditional formatting to column F based on whether the difference is positive or negative
+    Dim positiveCondition As FormatCondition
+    Dim negativeCondition As FormatCondition
+    
+    ' Define positive condition (greater than or equal to 0)
+    Set positiveCondition = ws.Cells(5, 6).Resize(lastRow - 4).FormatConditions.Add(Type:=xlCellValue, Operator:=xlGreaterEqual, Formula1:="0")
+    With positiveCondition.Interior
+        .Color = RGB(255, 0, 0) ' Red color
+    End With
+    
+    ' Define negative condition (less than 0)
+    Set negativeCondition = ws.Cells(5, 6).Resize(lastRow - 4).FormatConditions.Add(Type:=xlCellValue, Operator:=xlLess, Formula1:="0")
+    With negativeCondition.Interior
+        .Color = RGB(0, 255, 0) ' Green color (you can change to your desired negative color)
+    End With
+    
+    ' Adjust column widths if necessary
+    ws.Columns("A:F").AutoFit
+    
+    ' Clean up
+    Set ws = Nothing
+    Set rng = Nothing
+    Set diffCol = Nothing
+    Set positiveCondition = Nothing
+    Set negativeCondition = Nothing
+End Sub
+
+OPTIMIZED - 
+
+Sub SortAndCalculateDifferenceOptimized()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim data As Variant
+    Dim diff() As Variant
+    Dim i As Long
+    
+    ' Turn off screen updating and calculation
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    
+    ' Set the worksheet where data is located
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Change "Sheet1" to your actual sheet name
+    
+    ' Find the last row in column A
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    ' Read data from columns D and E into an array
+    data = ws.Range("D5:E" & lastRow).Value
+    
+    ' Prepare array for differences
+    ReDim diff(1 To UBound(data, 1), 1 To 1)
+    
+    ' Calculate differences and populate the array
+    For i = 1 To UBound(data, 1)
+        If IsNumeric(data(i, 1)) And IsNumeric(data(i, 2)) Then
+            diff(i, 1) = data(i, 1) - data(i, 2)
+        Else
+            ' Handle non-numeric values or errors if needed
+            ' For example, you can set diff(i, 1) = "Error" or something else
+        End If
+    Next i
+    
+    ' Write differences back to column F
+    ws.Range("F5:F" & lastRow).Value = diff
+    
+    ' Sort column A from row 5 to lastRow
+    With ws.Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=ws.Range("A5:A" & lastRow), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+        .SetRange ws.Range("A5:F" & lastRow)
+        .Header = xlNo
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+    
+    ' Apply conditional formatting to column F based on whether the difference is positive or negative
+    With ws.Range("F5:F" & lastRow).FormatConditions
+        ' Positive condition (greater than or equal to 0)
+        .Add Type:=xlCellValue, Operator:=xlGreaterEqual, Formula1:="0"
+        .Item(.Count).Interior.Color = RGB(255, 0, 0) ' Red color
+        
+        ' Negative condition (less than 0)
+        .Add Type:=xlCellValue, Operator:=xlLess, Formula1:="0"
+        .Item(.Count).Interior.Color = RGB(0, 255, 0) ' Green color (you can change to your desired negative color)
+    End With
+    
+    ' Adjust column widths if necessary
+    ws.Columns("A:F").AutoFit
+    
+    ' Turn on screen updating and calculation
+    Application.ScreenUpdating = True
+    Application.Calculation = xlCalculationAutomatic
+    
+    ' Clean up
+    Set ws = Nothing
+    Erase data
+    Erase diff
+End Sub
+
+
+===============================
+
+
+Option Explicit
+
+' Main procedure to initiate the entire workflow
+Sub Wrapper()
+    On Error GoTo ErrorHandler
+    
+    ' Turn off alerts and screen updating for smoother execution
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    
+    ' Initialize variables
+    Application.StatusBar = "Initializing Variables..."
+    InitializeVariables
+    
+    Dim randomNumber As String
+    randomNumber = Format(Now(), "hhmmss") & Int((1111 + Rnd() * (9999 - 1111 + 1)))
+    Dim ResultSummaryFile As String
+    ResultSummaryFile = DestFolder & "ResultSummary_" & randomNumber & ".xlsx"
+    
+    ' Check Dynatrace duration; if more than 6 hours, prompt user
+    If (Round((CDate(Run1_Dynatrace_ToDuration) - CDate(Run1_Dynatrace_FromDuration)) * 24, 2)) > 6 Then
+        Dim userResponse As VbMsgBoxResult
+        userResponse = MsgBox("Ensure Dynatrace granularity is set to 10m or more if Dynatrace duration is more than 6 hours. Click NO to end program and edit", vbYesNo + vbQuestion)
+        If userResponse = vbNo Then
+            MsgBox "You cancelled"
+            Exit Sub
+        End If
+    End If
+    
+    ' Clean up existing sheets
+    Application.StatusBar = "Cleaning up the sheets..."
+    DeleteWorksheets
+    
+    ' Add new worksheet for Result Summary
+    Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & Run1_RunID
+    
+    ' Execute PC API for Run1
+    Application.StatusBar = "Executing PC API for Run1..."
+    If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, Run1_RunID, "ResultSummary_" & Run1_RunID) Then
+        GoTo CleanUpAndExit
+    End If
+    
+    Application.StatusBar = "Retrieving LoadRunner Metrics from Result..."
+    Call CallAccessQuery(unzipToPath, Run1_LrChartResolution)
+    
+    ' If CompareRun_Flag is YES, proceed with Run2 and optionally for Run3
+    If UCase(CompareRun_Flag) = "YES" Then
+        If Len(Trim(Run2_RunID)) > 0 Then
+            Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & CStr(Run2_RunID)
+            Application.StatusBar = "Executing PC API for Run2..."
+            If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, CStr(Run2_RunID), "ResultSummary_" & Run2_RunID) Then
+                GoTo CleanUpAndExit
+            End If
+        End If
+        
+        If Len(Trim(Run3_RunID)) > 0 Then
+            Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & CStr(Run3_RunID)
+            Application.StatusBar = "Executing PC API for Run3..."
+            If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, CStr(Run3_RunID), "ResultSummary_" & Run3_RunID) Then
+                GoTo CleanUpAndExit
+            End If
+        End If
+    End If
+    
+    ' Clean formatting for Result Summary
+    Call CleanFormattingResultSummary
+    Call ConsolidateTransactionNames
+    
+    ' Create Result Summary file and copy summary sheet if required
+    Application.StatusBar = "Creating Result Summary File..."
+    Call CopySummarySheetToExcel(ResultSummaryFile, "YES")
+    FormatMainReport "ResultSummary"
+    
+    ' Delete extract folders if they exist
+    If DirExists(extractPathLocation & "\ExtractResult_" & Run1_RunID) Then
+        CreateObject("Scripting.FileSystemObject").DeleteFolder extractPathLocation & "\ExtractResult_" & Run1_RunID
+    End If
+    If DirExists(extractPathLocation & "\ExtractResult_" & CStr(Run2_RunID)) Then
+        CreateObject("Scripting.FileSystemObject").DeleteFolder extractPathLocation & "\ExtractResult_" & CStr(Run2_RunID)
+    End If
+    If DirExists(extractPathLocation & "\ExtractResult_" & CStr(Run3_RunID)) Then
+        CreateObject("Scripting.FileSystemObject").DeleteFolder extractPathLocation & "\ExtractResult_" & CStr(Run3_RunID)
+    End If
+    
+    ' Retrieve Dynatrace data for selected application
+    Application.StatusBar = "Retrieving Dynatrace Data..."
+    RetrieveDynatraceHostServerUtilizationData selectedApplicationName, DT_Group_Server_Flag, Run1_Dynatrace_FromDuration, Run1_Dynatrace_ToDuration, Run1_DTChartResolution, "R" & Run1_RunID
+    
+    ' Start plotting graphs
+    Application.StatusBar = "Starting to plot graphs..."
+    Sheets("RunningServers").Select
+    CreateChartsForWorksheets
+    HighlightExceedELA
+    CloseWorkbook
+    
+    ' Export and prepare report in PPT
+    Application.StatusBar = "Exporting and preparing report in PPT..."
+    OpenExistingPPTInstance DestFolder & "Reports_PES_Report_" & Run1_RunID & ".pptx", ReportTemplatePath, Run1_RunID
+    Sheets("TextLaunchConfig").Select
+    
+    ' Final status message
+    Application.StatusBar = "Done."
+    ActiveWorkbook.Save
+    
+CleanUpAndExit:
+    ' Clean up - delete temporary files
+    DeleteFile ResultSummaryFile
+    DeleteFile outputExcelLocation
+    
+    ' Update launch config sheet with completion message
+    Sheets("TextLaunchConfig").Cells(1, 18) = "Done. Results at: " & Now()
+    
+    ' Reset display alerts and screen updating
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred: " & Err.Description
+    Resume CleanUpAndExit
+End Sub
+
+' Example function stubs (replace with actual implementations)
+Sub InitializeVariables()
+    ' Initialize variables based on user input
+End Sub
+
+Sub DeleteWorksheets()
+    ' Delete all worksheets except for the necessary ones
+End Sub
+
+Function LoginToPC_GetResults(PC_UserCreds As String, PC_ServerName As String, PC_ProjectName As String, PC_DomainName As String, RunID As String, sheetName As String) As Boolean
+    ' Placeholder for PC API login and result retrieval
+    LoginToPC_GetResults = True ' Simulating success for example
+End Function
+
+Sub CallAccessQuery(unzipToPath As String, LrChartResolution As Integer)
+    ' Placeholder for retrieving LoadRunner metrics
+End Sub
+
+Sub CleanFormattingResultSummary()
+    ' Placeholder for cleaning up formatting
+End Sub
+
+Sub ConsolidateTransactionNames()
+    ' Placeholder for consolidating transaction names
+End Sub
+
+Sub CopySummarySheetToExcel(ResultSummaryFile As String, optionalFlag As String)
+    ' Placeholder for copying summary sheet
+End Sub
+
+Sub RetrieveDynatraceHostServerUtilizationData(selectedApplicationName As String, DT_Group_Server_Flag As Boolean, Run1_Dynatrace_FromDuration As String, Run1_Dynatrace_ToDuration As String, Run1_DTChartResolution As String, RunID As String)
+    ' Placeholder for retrieving Dynatrace data
+End Sub
+
+Sub CreateChartsForWorksheets()
+    ' Placeholder for creating charts for worksheets
+End Sub
+
+Sub HighlightExceedELA()
+    ' Placeholder for highlighting exceedance of ELA
+End Sub
+
+Sub CloseWorkbook()
+    ' Placeholder for closing the workbook
+End Sub
+
+Sub OpenExistingPPTInstance(pptFilePath As String, reportTemplatePath As String, RunID As String)
+    ' Placeholder for preparing report in PPT
+End Sub
+
+Function DirExists(path As String) As Boolean
+    ' Function to check if directory exists
+    DirExists = CreateObject("Scripting.FileSystemObject").FolderExists(path)
+End Function
+
+Sub DeleteFile(filePath As String)
+    ' Function to delete file if it exists
+    If Dir(filePath) <> "" Then Kill filePath
+End Sub
+
+Sub FormatMainReport(sheetName As String)
+    ' Placeholder for formatting the main report
+End Sub
+
+
+Explanation of the Consolidated Code
+Wrapper Subroutine:
+
+Initiates the workflow by calling subroutines in sequence.
+Manages error handling and resets application settings upon completion or error.
+InitializeVariables Subroutine:
+
+Initializes necessary variables based on user input from a configuration sheet.
+DeleteWorksheets Subroutine:
+
+Deletes any existing worksheets to start fresh.
+LoginToPC_GetResults Function:
+
+Simulates the process of logging into the PC API and retrieving results.
+CallAccessQuery Subroutine:
+
+Simulates retrieval of LoadRunner metrics.
+CleanFormattingResultSummary Subroutine:
+
+Cleans up the formatting of the result summary.
+ConsolidateTransactionNames Subroutine:
+
+Consolidates transaction names in the result summary.
+CopySummarySheetToExcel Subroutine:
+
+Copies the summary sheet to a new Excel file.
+
+
+
+
+Option Explicit
+
+' Main procedure to initiate the entire workflow
+Sub Wrapper()
+    On Error GoTo ErrorHandler
+    
+    ' Turn off alerts and screen updating for smoother execution
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    
+    ' Initialize variables
+    Application.StatusBar = "Initializing Variables..."
+    InitializeVariables
+    
+    Dim randomNumber As String
+    randomNumber = Format(Now(), "hhmmss") & Int((1111 + Rnd() * (9999 - 1111 + 1)))
+    Dim ResultSummaryFile As String
+    ResultSummaryFile = DestFolder & "ResultSummary_" & randomNumber & ".xlsx"
+    
+    ' Check Dynatrace duration; if more than 6 hours, prompt user
+    If (Round((CDate(Run1_Dynatrace_ToDuration) - CDate(Run1_Dynatrace_FromDuration)) * 24, 2)) > 6 Then
+        Dim userResponse As VbMsgBoxResult
+        userResponse = MsgBox("Ensure Dynatrace granularity is set to 10m or more if Dynatrace duration is more than 6 hours. Click NO to end program and edit", vbYesNo + vbQuestion)
+        If userResponse = vbNo Then
+            MsgBox "You cancelled"
+            Exit Sub
+        End If
+    End If
+    
+    ' Clean up existing sheets
+    Application.StatusBar = "Cleaning up the sheets..."
+    DeleteWorksheets
+    
+    ' Add new worksheet for Result Summary
+    Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & Run1_RunID
+    
+    ' Execute PC API for Run1
+    Application.StatusBar = "Executing PC API for Run1..."
+    If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, Run1_RunID, "ResultSummary_" & Run1_RunID) Then
+        GoTo CleanUpAndExit
+    End If
+    
+    Application.StatusBar = "Retrieving LoadRunner Metrics from Result..."
+    Call CallAccessQuery(unzipToPath, Run1_LrChartResolution)
+    
+    ' If CompareRun_Flag is YES, proceed with Run2 and optionally for Run3
+    If UCase(CompareRun_Flag) = "YES" Then
+        If Len(Trim(Run2_RunID)) > 0 Then
+            Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & CStr(Run2_RunID)
+            Application.StatusBar = "Executing PC API for Run2..."
+            If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, CStr(Run2_RunID), "ResultSummary_" & Run2_RunID) Then
+                GoTo CleanUpAndExit
+            End If
+        End If
+        
+        If Len(Trim(Run3_RunID)) > 0 Then
+            Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & CStr(Run3_RunID)
+            Application.StatusBar = "Executing PC API for Run3..."
+            If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, CStr(Run3_RunID), "ResultSummary_" & Run3_RunID) Then
+                GoTo CleanUpAndExit
+            End If
+        End If
+    End If
+    
+    ' Clean formatting for Result Summary
+    Call CleanFormattingResultSummary
+    Call ConsolidateTransactionNames
+    
+    ' Create Result Summary file and copy summary sheet if required
+    Application.StatusBar = "Creating Result Summary File..."
+    Call CopySummarySheetToExcel(ResultSummaryFile, "YES")
+    FormatMainReport "ResultSummary"
+    
+    ' Delete extract folders if they exist
+    DeleteFolderIfExists extractPathLocation & "\ExtractResult_" & Run1_RunID
+    DeleteFolderIfExists extractPathLocation & "\ExtractResult_" & CStr(Run2_RunID)
+    DeleteFolderIfExists extractPathLocation & "\ExtractResult_" & CStr(Run3_RunID)
+    
+    ' Retrieve Dynatrace data for selected application
+    Application.StatusBar = "Retrieving Dynatrace Data..."
+    RetrieveDynatraceHostServerUtilizationData selectedApplicationName, DT_Group_Server_Flag, Run1_Dynatrace_FromDuration, Run1_Dynatrace_ToDuration, Run1_DTChartResolution, "R" & Run1_RunID
+    
+    ' Start plotting graphs
+    Application.StatusBar = "Starting to plot graphs..."
+    Sheets("RunningServers").Select
+    CreateChartsForWorksheets
+    HighlightExceedELA
+    CloseWorkbook
+    
+    ' Export and prepare report in PPT
+    Application.StatusBar = "Exporting and preparing report in PPT..."
+    OpenExistingPPTInstance DestFolder & "Reports_PES_Report_" & Run1_RunID & ".pptx", ReportTemplatePath, Run1_RunID
+    Sheets("TextLaunchConfig").Select
+    
+    ' Final status message
+    Application.StatusBar = "Done."
+    ActiveWorkbook.Save
+    
+CleanUpAndExit:
+    ' Clean up - delete temporary files
+    DeleteFile ResultSummaryFile
+    DeleteFile outputExcelLocation
+    
+    ' Update launch config sheet with completion message
+    Sheets("TextLaunchConfig").Cells(1, 18) = "Done. Results at: " & Now()
+    
+    ' Reset display alerts and screen updating
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred: " & Err.Description
+    Resume CleanUpAndExit
+End Sub
+
+' Initialize variables based on user input
+Sub InitializeVariables()
+    ' Example: Assign values from a configuration sheet to variables
+    PC_UserCreds = "user_credentials"
+    PC_ServerName = "server_name"
+    PC_ProjectName = "project_name"
+    PC_DomainName = "domain_name"
+    Run1_RunID = "12345"
+    Run1_Dynatrace_FromDuration = "01/01/2024 00:00"
+    Run1_Dynatrace_ToDuration = "01/01/2024 06:00"
+    Run1_LrChartResolution = 10
+    CompareRun_Flag = "YES"
+    Run2_RunID = "23456"
+    Run3_RunID = "34567"
+    DestFolder = "C:\Results\"
+    unzipToPath = "C:\Temp\Unzip\"
+    extractPathLocation = "C:\Temp\Extract\"
+    selectedApplicationName = "MyApp"
+    DT_Group_Server_Flag = True
+    Run1_DTChartResolution = 10
+    ReportTemplatePath = "C:\Templates\ReportTemplate.pptx"
+    outputExcelLocation = "C:\Temp\Output.xlsx"
+End Sub
+
+' Delete all worksheets except for the necessary ones
+Sub DeleteWorksheets()
+    Dim ws As Worksheet
+    For Each ws In ThisWorkbook.Worksheets
+        If ws.Name <> "TextLaunchConfig" Then
+            Application.DisplayAlerts = False
+            ws.Delete
+            Application.DisplayAlerts = True
+        End If
+    Next ws
+End Sub
+
+' Placeholder for PC API login and result retrieval
+Function LoginToPC_GetResults(PC_UserCreds As String, PC_ServerName As String, PC_ProjectName As String, PC_DomainName As String, RunID As String, sheetName As String) As Boolean
+    ' Simulate success for example
+    LoginToPC_GetResults = True
+    ' Add actual code to retrieve results
+End Function
+
+' Placeholder for retrieving LoadRunner metrics
+Sub CallAccessQuery(unzipToPath As String, LrChartResolution As Integer)
+    ' Add code to retrieve metrics
+End Sub
+
+' Placeholder for cleaning up formatting
+Sub CleanFormattingResultSummary()
+    ' Add code for formatting
+End Sub
+
+' Placeholder for consolidating transaction names
+Sub ConsolidateTransactionNames()
+    ' Add code for consolidation
+End Sub
+
+' Placeholder for copying summary sheet
+Sub CopySummarySheetToExcel(ResultSummaryFile As String, optionalFlag As String)
+    ' Add code to copy summary sheet
+End Sub
+
+' Placeholder for retrieving Dynatrace data
+Sub RetrieveDynatraceHostServerUtilizationData(selectedApplicationName As String, DT_Group_Server_Flag As Boolean, Run1_Dynatrace_FromDuration As String, Run1_Dynatrace_ToDuration As String, Run1_DTChartResolution As String, RunID As String)
+    ' Add code to retrieve Dynatrace data
+End Sub
+
+' Placeholder for creating charts for worksheets
+Sub CreateChartsForWorksheets()
+    ' Add code for creating charts
+End Sub
+
+' Placeholder for highlighting exceedance of ELA
+Sub HighlightExceedELA()
+    ' Add code to highlight exceedance of ELA
+End Sub
+
+' Placeholder for closing the workbook
+Sub CloseWorkbook()
+    ' Add code to close the workbook
+End Sub
+
+' Placeholder for preparing report in PPT
+Sub OpenExistingPPTInstance(pptFilePath As String, reportTemplatePath As String, RunID As String)
+    ' Add code for PPT report preparation
+End Sub
+
+' Function to check if directory exists
+Function DirExists(path As String) As Boolean
+    DirExists = CreateObject("Scripting.FileSystemObject").FolderExists(path)
+End Function
+
+' Function to delete file if it exists
+Sub DeleteFile(filePath As String)
+    If Dir(filePath) <> "" Then Kill filePath
+End Sub
+
+' Function to delete folder if it exists
+Sub DeleteFolderIfExists(folderPath As String)
+    If DirExists(folderPath) Then
+        CreateObject("Scripting.FileSystemObject").DeleteFolder folderPath
+    End If
+End Sub
+
+' Placeholder for formatting the main report
+Sub FormatMainReport(sheetName As String)
+    ' Add code to format main report
+End Sub
+
+
+Structure of the Code
+Wrapper Subroutine:
+
+Manages the workflow by calling subroutines for initializing variables, deleting worksheets, executing PC API, retrieving metrics, and generating reports.
+Includes error handling to clean up and exit gracefully if any error occurs.
+Initialization and Cleanup:
+
+InitializeVariables: Sets up the necessary variables for the workflow.
+DeleteWorksheets: Removes existing worksheets except for the configuration sheet.
+API and Data Retrieval:
+
+LoginToPC_GetResults: Placeholder for calling the Performance Center API to get results.
+CallAccessQuery: Placeholder for retrieving LoadRunner metrics.
+Data Processing and Formatting:
+
+CleanFormattingResultSummary: Cleans up the formatting of the result summary.
+ConsolidateTransactionNames: Consolidates transaction names in the summary.
+Report Generation:
+
+CopySummarySheetToExcel: Copies the summary sheet to an Excel file.
+RetrieveDynatraceHostServerUtilizationData: Retrieves Dynatrace data based on specified parameters.
+CreateChartsForWorksheets: Creates charts for each worksheet.
+HighlightExceedELA: Highlights where ELA (expected load average) exceeds thresholds.
+CloseWorkbook: Closes the workbook after operations.
+OpenExistingPPTInstance: Prepares a report in a PowerPoint file.
+Utility Functions:
+
+DirExists: Checks if a directory exists.
+DeleteFile: Deletes a specified file.
+DeleteFolderIfExists: Deletes a specified folder if it exists.
+Usage
+To use the consolidated code:
+
+Place the entire code into a module in your VBA environment.
+Run the Wrapper subroutine to execute the workflow.
+
+
+
+
+Option Explicit
+
+' Main procedure to initiate the entire workflow
+Sub Wrapper()
+    On Error GoTo ErrorHandler
+    
+    ' Turn off alerts and screen updating for smoother execution
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    
+    ' Initialize variables
+    Application.StatusBar = "Initializing Variables..."
+    InitializeVariables
+    
+    Dim randomNumber As String
+    randomNumber = Format(Now(), "hhmmss") & Int((1111 + Rnd() * (9999 - 1111 + 1)))
+    Dim ResultSummaryFile As String
+    ResultSummaryFile = DestFolder & "ResultSummary_" & randomNumber & ".xlsx"
+    
+    ' Check Dynatrace duration; if more than 6 hours, prompt user
+    If (Round((CDate(Run1_Dynatrace_ToDuration) - CDate(Run1_Dynatrace_FromDuration)) * 24, 2)) > 6 Then
+        Dim userResponse As VbMsgBoxResult
+        userResponse = MsgBox("Ensure Dynatrace granularity is set to 10m or more if Dynatrace duration is more than 6 hours. Click NO to end program and edit", vbYesNo + vbQuestion)
+        If userResponse = vbNo Then
+            MsgBox "You cancelled"
+            Exit Sub
+        End If
+    End If
+    
+    ' Clean up existing sheets
+    Application.StatusBar = "Cleaning up the sheets..."
+    DeleteWorksheets
+    
+    ' Add new worksheet for Result Summary
+    Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & Run1_RunID
+    
+    ' Execute PC API for Run1
+    Application.StatusBar = "Executing PC API for Run1..."
+    If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, Run1_RunID, "ResultSummary_" & Run1_RunID) Then
+        GoTo CleanUpAndExit
+    End If
+    
+    Application.StatusBar = "Retrieving LoadRunner Metrics from Result..."
+    Call CallAccessQuery(unzipToPath, Run1_LrChartResolution)
+    
+    ' If CompareRun_Flag is YES, proceed with Run2 and optionally for Run3
+    If UCase(CompareRun_Flag) = "YES" Then
+        If Len(Trim(Run2_RunID)) > 0 Then
+            Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & CStr(Run2_RunID)
+            Application.StatusBar = "Executing PC API for Run2..."
+            If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, CStr(Run2_RunID), "ResultSummary_" & Run2_RunID) Then
+                GoTo CleanUpAndExit
+            End If
+        End If
+        
+        If Len(Trim(Run3_RunID)) > 0 Then
+            Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & CStr(Run3_RunID)
+            Application.StatusBar = "Executing PC API for Run3..."
+            If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, CStr(Run3_RunID), "ResultSummary_" & Run3_RunID) Then
+                GoTo CleanUpAndExit
+            End If
+        End If
+    End If
+    
+    ' Clean formatting for Result Summary
+    Call CleanFormattingResultSummary
+    Call ConsolidateTransactionNames
+    
+    ' Create Result Summary file and copy summary sheet if required
+    Application.StatusBar = "Creating Result Summary File..."
+    Call CopySummarySheetToExcel(ResultSummaryFile, "YES")
+    FormatMainReport "ResultSummary"
+    
+    ' Delete extract folders if they exist
+    DeleteFolderIfExists extractPathLocation & "\ExtractResult_" & Run1_RunID
+    DeleteFolderIfExists extractPathLocation & "\ExtractResult_" & CStr(Run2_RunID)
+    DeleteFolderIfExists extractPathLocation & "\ExtractResult_" & CStr(Run3_RunID)
+    
+    ' Retrieve Dynatrace data for selected application
+    Application.StatusBar = "Retrieving Dynatrace Data..."
+    RetrieveDynatraceHostServerUtilizationData selectedApplicationName, DT_Group_Server_Flag, Run1_Dynatrace_FromDuration, Run1_Dynatrace_ToDuration, Run1_DTChartResolution, "R" & Run1_RunID
+    
+    ' Start plotting graphs
+    Application.StatusBar = "Starting to plot graphs..."
+    Sheets("RunningServers").Select
+    CreateChartsForWorksheets
+    HighlightExceedELA
+    CloseWorkbook
+    
+    ' Export and prepare report in PPT
+    Application.StatusBar = "Exporting and preparing report in PPT..."
+    OpenExistingPPTInstance DestFolder & "Reports_PES_Report_" & Run1_RunID & ".pptx", ReportTemplatePath, Run1_RunID
+    Sheets("TextLaunchConfig").Select
+    
+    ' Final status message
+    Application.StatusBar = "Done."
+    ActiveWorkbook.Save
+    
+CleanUpAndExit:
+    ' Clean up - delete temporary files
+    DeleteFile ResultSummaryFile
+    DeleteFile outputExcelLocation
+    
+    ' Update launch config sheet with completion message
+    Sheets("TextLaunchConfig").Cells(1, 18) = "Done. Results at: " & Now()
+    
+    ' Reset display alerts and screen updating
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred: " & Err.Description
+    Resume CleanUpAndExit
+End Sub
+
+' Initialize variables based on user input
+Sub InitializeVariables()
+    ' Replace with actual variable initialization
+    PC_UserCreds = Sheets("TextLaunchConfig").Range("B2").Value
+    PC_ServerName = Sheets("TextLaunchConfig").Range("B3").Value
+    PC_ProjectName = Sheets("TextLaunchConfig").Range("B4").Value
+    PC_DomainName = Sheets("TextLaunchConfig").Range("B5").Value
+    Run1_RunID = Sheets("TextLaunchConfig").Range("B6").Value
+    Run1_Dynatrace_FromDuration = Sheets("TextLaunchConfig").Range("B7").Value
+    Run1_Dynatrace_ToDuration = Sheets("TextLaunchConfig").Range("B8").Value
+    Run1_LrChartResolution = Sheets("TextLaunchConfig").Range("B9").Value
+    CompareRun_Flag = Sheets("TextLaunchConfig").Range("B10").Value
+    Run2_RunID = Sheets("TextLaunchConfig").Range("B11").Value
+    Run3_RunID = Sheets("TextLaunchConfig").Range("B12").Value
+    DestFolder = Sheets("TextLaunchConfig").Range("B13").Value
+    unzipToPath = Sheets("TextLaunchConfig").Range("B14").Value
+    extractPathLocation = Sheets("TextLaunchConfig").Range("B15").Value
+    selectedApplicationName = Sheets("TextLaunchConfig").Range("B16").Value
+    DT_Group_Server_Flag = Sheets("TextLaunchConfig").Range("B17").Value
+    Run1_DTChartResolution = Sheets("TextLaunchConfig").Range("B18").Value
+    ReportTemplatePath = Sheets("TextLaunchConfig").Range("B19").Value
+    outputExcelLocation = Sheets("TextLaunchConfig").Range("B20").Value
+End Sub
+
+' Delete all worksheets except for the necessary ones
+Sub DeleteWorksheets()
+    Dim ws As Worksheet
+    For Each ws In ThisWorkbook.Worksheets
+        If ws.Name <> "TextLaunchConfig" Then
+            Application.DisplayAlerts = False
+            ws.Delete
+            Application.DisplayAlerts = True
+        End If
+    Next ws
+End Sub
+
+' Actual implementation for PC API login and result retrieval
+Function LoginToPC_GetResults(PC_UserCreds As String, PC_ServerName As String, PC_ProjectName As String, PC_DomainName As String, RunID As String, sheetName As String) As Boolean
+    Dim xmlHTTP As Object
+    Set xmlHTTP = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    
+    Dim postURL As String
+    postURL = "http://" & PC_ServerName & "/LoadTest/rest/domains/" & PC_DomainName & "/projects/" & PC_ProjectName & "/Runs/" & RunID & "/Results"
+    
+    ' Send the request
+    xmlHTTP.Open "GET", postURL, False, PC_UserCreds, ""
+    xmlHTTP.setRequestHeader "Content-Type", "application/xml"
+    xmlHTTP.send ""
+    
+    ' Check the response
+    If xmlHTTP.Status = 200 Then
+        ' Save response to sheet
+        Dim xmlDoc As Object
+        Set xmlDoc = CreateObject("MSXML2.DOMDocument")
+        xmlDoc.LoadXML xmlHTTP.responseText
+        
+        Dim resultsNodeList As Object
+        Set resultsNodeList = xmlDoc.getElementsByTagName("Result")
+        
+        Dim i As Integer
+        For i = 0 To resultsNodeList.Length - 1
+            Sheets(sheetName).Cells(i + 1, 1).Value = resultsNodeList(i).Text
+        Next i
+        
+        LoginToPC_GetResults = True
+    Else
+        MsgBox "Error retrieving PC results: " & xmlHTTP.Status & " " & xmlHTTP.statusText
+        LoginToPC_GetResults = False
+    End If
+    
+    Set xmlHTTP = Nothing
+End Function
+
+' Actual implementation for retrieving LoadRunner metrics
+Sub CallAccessQuery(unzipToPath As String, LrChartResolution As Integer)
+    ' Assume that metrics are in an Access database or similar, and we need to extract data
+    Dim con As Object, rs As Object
+    Set con = CreateObject("ADODB.Connection")
+    Set rs = CreateObject("ADODB.Recordset")
+    
+    Dim dbPath As String
+    dbPath = unzipToPath & "LoadRunnerMetrics.accdb"
+    
+    ' Open the database
+    con.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & dbPath
+    
+    ' Query to retrieve data
+    Dim query As String
+    query = "SELECT * FROM Metrics WHERE Resolution = " & LrChartResolution
+    
+    rs.Open query, con
+    
+    Dim i As Integer
+    i = 1
+    Do While Not rs.EOF
+        Sheets("ResultSummary_" & Run1_RunID).Cells(i, 1).Value = rs.Fields(0).Value
+        Sheets("ResultSummary_" & Run1_RunID).Cells(i, 2).Value = rs.Fields(1).Value
+        ' Continue mapping fields as needed
+        rs.MoveNext
+        i = i + 1
+    Loop
+    
+    rs.Close
+    con.Close
+    
+    Set rs = Nothing
+    Set con = Nothing
+End Sub
+
+' Actual implementation for cleaning up formatting
+Sub CleanFormattingResultSummary()
+    ' Example: Apply general formatting to the "ResultSummary" sheet
+    With Sheets("ResultSummary_" & Run1_RunID)
+        .Cells.Font.Name = "Calibri"
+        .Cells.Font.Size = 10
+        .Cells.HorizontalAlignment = xlCenter
+        .Cells.VerticalAlignment = xlCenter
+        .Columns.AutoFit
+    End With
+End Sub
+
+' Actual implementation for consolidating transaction names
+Sub ConsolidateTransactionNames()
+    ' Example: Consolidate transaction names in the "ResultSummary" sheet
+    Dim ws As Worksheet
+    Set ws = Sheets("ResultSummary_" & Run1_RunID)
+    
+    Dim dict As Object
+    Set dict = CreateObject("Scripting.Dictionary")
+    
+    Dim i As Integer
+    For i = 2 To ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+        Dim transactionName As String
+        transactionName = ws.Cells(i, 1).Value
+        
+        If Not dict.exists(transactionName) Then
+            dict.Add transactionName, 1
+        Else
+            dict(transactionName) = dict(transactionName) + 1
+        End If
+    Next i
+    
+    ' Output consolidated names
+    Dim j As Integer
+    j = 1
+    For Each Key In dict.Keys
+        ws.Cells(j, 1).Value = Key
+        ws.Cells(j, 2).Value = dict(Key)
+        j = j + 1
+    Next Key
+End Sub
+
+' Actual implementation for copying summary sheet
+Sub CopySummarySheetToExcel(ResultSummaryFile As String, optionalFlag As String)
+    ' Save the summary sheet to a new Excel file
+    Sheets("ResultSummary_" & Run1_RunID).Copy
+    ActiveWorkbook.SaveAs ResultSummaryFile
+    ActiveWorkbook.Close SaveChanges:=True
+End Sub
+
+' Actual implementation for retrieving Dynatrace data
+Sub RetrieveDynatraceHostServerUtilizationData(selectedApplicationName As String, DT_Group_Server_Flag As Boolean, Run1_Dynatrace_FromDuration As String, Run1_Dynatrace_ToDuration As String, Run1_DTChartResolution As String, RunID As String)
+    ' Sample implementation for retrieving Dynatrace data via an API
+    Dim xmlHTTP As Object
+    Set xmlHTTP = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    
+    Dim postURL As String
+    postURL = "https://dynatrace-api.com/api/v1/hosts?start=" & Run1_Dynatrace_FromDuration & "&end=" & Run1_Dynatrace_ToDuration
+    
+    ' Send the request
+    xmlHTTP.Open "GET", postURL, False, "apiToken", ""
+    xmlHTTP.setRequestHeader "Authorization", "Api-Token " & "your_token_here"
+    xmlHTTP.send ""
+    
+    ' Check the response
+    If xmlHTTP.Status = 200 Then
+        ' Save response to sheet
+        Dim json As Object
+        Set json = JsonConverter.ParseJson(xmlHTTP.responseText)
+        
+        Dim i As Integer
+        i = 1
+        For Each item In json("hosts")
+            Sheets("ResultSummary_" & RunID).Cells(i, 1).Value = item("name")
+            Sheets("ResultSummary_" & RunID).Cells(i, 2).Value = item("memory")
+            ' Continue mapping fields as needed
+            i = i + 1
+        Next item
+    Else
+        MsgBox "Error retrieving Dynatrace data: " & xmlHTTP.Status & " " & xmlHTTP.statusText
+    End If
+    
+    Set xmlHTTP = Nothing
+End Sub
+
+' Actual implementation for creating charts for worksheets
+Sub CreateChartsForWorksheets()
+    ' Example: Create a chart for the data in "ResultSummary" sheet
+    Dim ws As Worksheet
+    Set ws = Sheets("ResultSummary_" & Run1_RunID)
+    
+    Dim chartObj As ChartObject
+    Set chartObj = ws.ChartObjects.Add(Left:=100, Width:=375, Top:=50, Height:=225)
+    With chartObj.Chart
+        .SetSourceData Source:=ws.Range("A1:B10")
+        .ChartType = xlColumnClustered
+        .HasTitle = True
+        .ChartTitle.Text = "Sample Chart"
+        .Axes(xlCategory).HasTitle = True
+        .Axes(xlCategory).AxisTitle.Text = "Category"
+        .Axes(xlValue).HasTitle = True
+        .Axes(xlValue).AxisTitle.Text = "Values"
+    End With
+End Sub
+
+' Actual implementation for highlighting exceedance of ELA
+Sub HighlightExceedELA()
+    ' Example: Highlight cells in "ResultSummary" where values exceed a threshold
+    Dim ws As Worksheet
+    Set ws = Sheets("ResultSummary_" & Run1_RunID)
+    
+    Dim lastRow As Long
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    
+    Dim threshold As Double
+    threshold = 100 ' Example threshold value
+    
+    Dim i As Integer
+    For i = 2 To lastRow
+        If ws.Cells(i, 2).Value > threshold Then
+            ws.Cells(i, 2).Interior.Color = RGB(255, 0, 0) ' Highlight in red
+        End If
+    Next i
+End Sub
+
+' Actual implementation for closing the workbook
+Sub CloseWorkbook()
+    ' Save and close the active workbook
+    ActiveWorkbook.Save
+    ActiveWorkbook.Close
+End Sub
+
+' Actual implementation for preparing report in PPT
+Sub OpenExistingPPTInstance(pptFilePath As String, reportTemplatePath As String, RunID As String)
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim pptSlide As Object
+    
+    Set pptApp = CreateObject("PowerPoint.Application")
+    pptApp.Visible = True
+    
+    ' Open or create the presentation
+    If Dir(pptFilePath) <> "" Then
+        Set pptPres = pptApp.Presentations.Open(pptFilePath)
+    Else
+        Set pptPres = pptApp.Presentations.Add
+        pptPres.SaveAs pptFilePath
+    End If
+    
+    ' Add a new slide
+    Set pptSlide = pptPres.Slides.Add(1, 1)
+    pptSlide.Shapes(1).TextFrame.TextRange.Text = "Performance Report - " & RunID
+    
+    ' Example: Add content to the slide
+    pptSlide.Shapes(1).TextFrame.TextRange.Text = "Report for Run ID: " & RunID
+    pptSlide.Shapes(2).TextFrame.TextRange.Text = "Summary of results goes here."
+    
+    ' Save and close
+    pptPres.Save
+    pptPres.Close
+    pptApp.Quit
+    
+    Set pptSlide = Nothing
+    Set pptPres = Nothing
+    Set pptApp = Nothing
+End Sub
+
+' Function to check if directory exists
+Function DirExists(path As String) As Boolean
+    DirExists = CreateObject("Scripting.FileSystemObject").FolderExists(path)
+End Function
+
+' Function to delete file if it exists
+Sub DeleteFile(filePath As String)
+    If Dir(filePath) <> "" Then Kill filePath
+End Sub
+
+' Function to delete folder if it exists
+Sub DeleteFolderIfExists(folderPath As String)
+    If DirExists(folderPath) Then
+        CreateObject("Scripting.FileSystemObject").DeleteFolder folderPath
+    End If
+End Sub
+
+' Actual implementation for formatting the main report
+Sub FormatMainReport(sheetName As String)
+    ' Example: Apply formatting to the main report sheet
+    With Sheets(sheetName)
+        .Cells.Font.Name = "Calibri"
+        .Cells.Font.Size = 12
+        .Cells.HorizontalAlignment = xlCenter
+        .Cells.VerticalAlignment = xlCenter
+        .Columns.AutoFit
+    End With
+End Sub
+
+
+Detailed Descriptions of Implemented Functions
+LoginToPC_GetResults:
+
+Makes an HTTP GET request to retrieve results from the Performance Center API and writes the data to a worksheet.
+CallAccessQuery:
+
+Connects to an Access database to retrieve LoadRunner metrics and writes the data to the "ResultSummary" worksheet.
+CleanFormattingResultSummary:
+
+Applies formatting such as font style, size, alignment, and auto-fitting columns to the "ResultSummary" worksheet.
+ConsolidateTransactionNames:
+
+Uses a dictionary to count occurrences of transaction names in the "ResultSummary" worksheet and consolidates them.
+CopySummarySheetToExcel:
+
+Copies the "ResultSummary" worksheet to a new Excel file.
+RetrieveDynatraceHostServerUtilizationData:
+
+Makes an HTTP GET request to retrieve Dynatrace data and writes it to the "ResultSummary" worksheet.
+CreateChartsForWorksheets:
+
+Creates a sample chart based on the data in the "ResultSummary" worksheet.
+HighlightExceedELA:
+
+Highlights cells in the "ResultSummary" worksheet where values exceed a predefined threshold.
+CloseWorkbook:
+
+Saves and closes the active workbook.
+OpenExistingPPTInstance:
+
+Opens an existing PowerPoint presentation or creates a new one, adds a slide, and writes content to it.
+DirExists, DeleteFile, DeleteFolderIfExists:
+
+Utility functions for file and folder management.
+FormatMainReport:
+
+Applies formatting to the main report sheet.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Option Explicit
+
+Sub MainWrapper()
+    Dim unzipToPath As String
+    Dim LrChartResolution As Integer
+    Dim RunID As String
+    Dim sqlQuery As String
+    Dim targetSheet As String
+    
+    ' Define paths and parameters
+    unzipToPath = "C:\path\to\unzipped\content\" ' Adjust this path
+    LrChartResolution = 60 ' Example resolution
+    RunID = "12345" ' Example RunID
+    
+    ' Define SQL query and target sheet
+    sqlQuery = "SELECT * FROM Metrics WHERE Resolution = " & LrChartResolution ' Example query
+    targetSheet = "AccessResults" ' Example target sheet name
+
+    ' Call the various subroutines
+    Call CallAccessQuery(unzipToPath & "LoadRunnerMetrics.accdb", sqlQuery, unzipToPath & "AccessQueryResults.xlsx", targetSheet)
+    Call CleanFormattingResultSummary(RunID)
+    Call ConsolidateTransactionNames(RunID)
+    Call CopySummarySheetToExcel("C:\path\to\resultSummary.xlsx", "Y")
+    Call RetrieveDynatraceHostServerUtilizationData("AppName", True, "2024-01-01", "2024-01-31", "1h", RunID)
+    Call CreateChartsForWorksheets(RunID)
+    Call HighlightExceedELA(RunID)
+    Call CloseWorkbook
+    Call OpenExistingPPTInstance("C:\path\to\report.pptx", "C:\path\to\template.pptx", RunID)
+End Sub
+
+' Calls a Python script to fetch data from Access and write it to an Excel file
+Sub CallAccessQuery(dbPath As String, sqlQuery As String, excelPath As String, sheetName As String)
+    Dim pythonScript As String
+    pythonScript = "python C:\path\to\query_runner.py """ & dbPath & """ """ & sqlQuery & """ """ & excelPath & """ """ & sheetName & """"
+    
+    ' Execute the Python script
+    Shell pythonScript, vbNormalFocus
+    
+    ' Wait for the script to finish (adjust as necessary)
+    Application.Wait Now + TimeValue("00:00:10")
+    
+    ' Load the data from the generated Excel file
+    If Dir(excelPath) <> "" Then
+        Dim ws As Worksheet
+        Set ws = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+        ws.Name = sheetName
+        
+        LoadDataFromExcel excelPath, ws
+    Else
+        MsgBox "Error: Python script did not create the expected Excel file."
+    End If
+End Sub
+
+' Helper function to load data from an Excel file into a worksheet
+Sub LoadDataFromExcel(filePath As String, ws As Worksheet)
+    Dim sourceWorkbook As Workbook
+    Set sourceWorkbook = Workbooks.Open(filePath)
+    
+    sourceWorkbook.Sheets(1).UsedRange.Copy ws.Cells(1, 1)
+    sourceWorkbook.Close SaveChanges:=False
+End Sub
+
+' Applies formatting to the "ResultSummary" sheet
+Sub CleanFormattingResultSummary(RunID As String)
+    With Sheets("ResultSummary_" & RunID)
+        .Cells.Font.Name = "Calibri"
+        .Cells.Font.Size = 10
+        .Cells.HorizontalAlignment = xlCenter
+        .Cells.VerticalAlignment = xlCenter
+        .Columns.AutoFit
+    End With
+End Sub
+
+' Consolidates transaction names in the "ResultSummary" sheet
+Sub ConsolidateTransactionNames(RunID As String)
+    Dim ws As Worksheet
+    Set ws = Sheets("ResultSummary_" & RunID)
+    
+    Dim dict As Object
+    Set dict = CreateObject("Scripting.Dictionary")
+    
+    Dim i As Integer
+    For i = 2 To ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+        Dim transactionName As String
+        transactionName = ws.Cells(i, 1).Value
+        
+        If Not dict.exists(transactionName) Then
+            dict.Add transactionName, 1
+        Else
+            dict(transactionName) = dict(transactionName) + 1
+        End If
+    Next i
+    
+    ' Output consolidated names
+    Dim j As Integer
+    j = 1
+    For Each Key In dict.Keys
+        ws.Cells(j, 1).Value = Key
+        ws.Cells(j, 2).Value = dict(Key)
+        j = j + 1
+    Next Key
+End Sub
+
+' Copies the "ResultSummary" sheet to a new Excel file
+Sub CopySummarySheetToExcel(ResultSummaryFile As String, optionalFlag As String)
+    Sheets("ResultSummary_" & RunID).Copy
+    ActiveWorkbook.SaveAs ResultSummaryFile
+    ActiveWorkbook.Close SaveChanges:=True
+End Sub
+
+' Retrieves Dynatrace host server utilization data via an API
+Sub RetrieveDynatraceHostServerUtilizationData(selectedApplicationName As String, DT_Group_Server_Flag As Boolean, Run1_Dynatrace_FromDuration As String, Run1_Dynatrace_ToDuration As String, Run1_DTChartResolution As String, RunID As String)
+    Dim xmlHTTP As Object
+    Set xmlHTTP = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+    
+    Dim postURL As String
+    postURL = "https://dynatrace-api.com/api/v1/hosts?start=" & Run1_Dynatrace_FromDuration & "&end=" & Run1_Dynatrace_ToDuration
+    
+    ' Send the request
+    xmlHTTP.Open "GET", postURL, False, "apiToken", ""
+    xmlHTTP.setRequestHeader "Authorization", "Api-Token " & "your_token_here"
+    xmlHTTP.send ""
+    
+    ' Check the response
+    If xmlHTTP.Status = 200 Then
+        ' Save response to sheet
+        Dim json As Object
+        Set json = JsonConverter.ParseJson(xmlHTTP.responseText)
+        
+        Dim i As Integer
+        i = 1
+        For Each item In json("hosts")
+            Sheets("ResultSummary_" & RunID).Cells(i, 1).Value = item("name")
+            Sheets("ResultSummary_" & RunID).Cells(i, 2).Value = item("memory")
+            ' Continue mapping fields as needed
+            i = i + 1
+        Next item
+    Else
+        MsgBox "Error retrieving Dynatrace data: " & xmlHTTP.Status & " " & xmlHTTP.statusText
+    End If
+    
+    Set xmlHTTP = Nothing
+End Sub
+
+' Creates a sample chart in the "ResultSummary" sheet
+Sub CreateChartsForWorksheets(RunID As String)
+    Dim ws As Worksheet
+    Set ws = Sheets("ResultSummary_" & RunID)
+    
+    Dim chartObj As ChartObject
+    Set chartObj = ws.ChartObjects.Add(Left:=100, Width:=375, Top:=50, Height:=225)
+    With chartObj.Chart
+        .SetSourceData Source:=ws.Range("A1:B10")
+        .ChartType = xlColumnClustered
+        .HasTitle = True
+        .ChartTitle.Text = "Sample Chart"
+        .Axes(xlCategory).HasTitle = True
+        .Axes(xlCategory).AxisTitle
+
+--------------
+
+python query_runner.py "path/to/database.accdb" "SELECT * FROM Table WHERE Condition" "path/to/output.xlsx" "SheetName"
+
+import pyodbc
+import sys
+import openpyxl
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+
+def fetch_data_from_access(db_path, query):
+    # Connect to the Access database
+    conn_str = (
+        r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
+        r'DBQ=' + db_path + ';'
+    )
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+    
+    # Execute the query
+    cursor.execute(query)
+    
+    # Fetch the results
+    columns = [column[0] for column in cursor.description]
+    rows = cursor.fetchall()
+    
+    return columns, rows
+
+def write_data_to_excel(columns, rows, excel_path, sheet_name):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = sheet_name
+    
+    # Write column headers
+    ws.append(columns)
+    
+    # Write data rows
+    for row in rows:
+        ws.append(row)
+    
+    # Adjust column widths
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)  # Get the column name
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(cell.value)
+            except:
+                pass
+        ws.column_dimensions[col_letter].width = max_length + 2
+    
+    # Save the workbook
+    wb.save(excel_path)
+
+if __name__ == "__main__":
+    db_path = sys.argv[1]
+    query = sys.argv[2]
+    excel_path = sys.argv[3]
+    sheet_name = sys.argv[4]
+    
+    columns, rows = fetch_data_from_access(db_path, query)
+    write_data_to_excel(columns, rows, excel_path, sheet_name)
+
+
+

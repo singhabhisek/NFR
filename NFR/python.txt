@@ -1,0 +1,817 @@
+from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
+import os
+import requests
+import openpyxl
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Border, Side
+
+# Function to unzip a file to a specified path
+def unzip_a_file(zipped_file_full_name, unzip_to_path):
+    import zipfile
+    
+    # Create destination directory if it doesn't exist
+    os.makedirs(unzip_to_path, exist_ok=True)
+    
+    # Extract contents from the zip file
+    with zipfile.ZipFile(zipped_file_full_name, 'r') as zip_ref:
+        zip_ref.extractall(unzip_to_path)
+
+# Custom lookup function with error handling
+def custom_lookup(lookup_value, table_array, col_index):
+    try:
+        # Attempt to find value in table_array using col_index
+        for row in table_array:
+            if row[0] == lookup_value:
+                return row[col_index]
+        return ""
+    except Exception as e:
+        print(f"Error in custom_lookup function: {str(e)}")
+        return ""
+
+# Function to check if a file exists
+def file_exists(file_to_test):
+    return os.path.isfile(file_to_test)
+
+# Subroutine to delete a file if it exists
+def delete_file(file_to_delete):
+    if file_exists(file_to_delete):
+        os.remove(file_to_delete)
+
+# Function to find the Nth occurrence of a substring
+def find_nth(s_find_what, s_input_string, n):
+    start = s_input_string.find(s_find_what)
+    while start >= 0 and n > 1:
+        start = s_input_string.find(s_find_what, start + len(s_find_what))
+        n -= 1
+    return start
+
+# Function to create a folder if it does not exist
+def mkdir(str_path):
+    os.makedirs(str_path, exist_ok=True)
+
+# Function to encode text to Base64
+def encode_base64(text):
+    import base64
+    return base64.b64encode(text.encode('utf-8')).decode('utf-8')
+
+# Subroutine to clean up a worksheet
+def clean_up(v_location, wb):
+    try:
+        # Activate the specified sheet
+        sheet = wb[v_location]
+        
+        # Select all cells
+        sheet.select()
+        
+        # Delete the content of selected cells and shift up
+        sheet.delete_rows(1, sheet.max_row)
+        
+        # Select cell A1
+        sheet['A1'].select()
+    except Exception as e:
+        print(f"Error in clean_up subroutine: {str(e)}")
+
+# Function to extract Analyzed Result ID from XML data
+def extract_analyzed_result_id(xml_data):
+    try:
+        import xml.etree.ElementTree as ET
+        
+        # Parse XML data
+        root = ET.fromstring(xml_data)
+        
+        # Iterate through child nodes
+        for list_node in root:
+            str_message = ""
+            for field_node in list_node:
+                if field_node.tag == "Type" or field_node.tag == "ID":
+                    str_message += field_node.text + ","
+            
+            # Check for "ANALYZED RESULT" and return ID
+            if "ANALYZED RESULT" in str_message:
+                return str_message.split(",")[0]
+        
+        return ""
+    except Exception as e:
+        print(f"Error in extract_analyzed_result_id function: {str(e)}")
+        return ""
+
+# Function to copy Excel chart to PowerPoint
+def copy_excel_objects(ppt, wb, sheet_name, chart_name, dst_slide, shape_number,
+                       shape_top=None, shape_left=None, shape_height=None, shape_width=None):
+    try:
+        from openpyxl.drawing.image import Image
+        
+        # Select the specified sheet
+        sheet = wb[sheet_name]
+        
+        # Get the chart image (assuming chart_name is a cell reference)
+        img_path = f"{sheet_name}_{chart_name}.png"
+        chart = sheet[chart_name]
+        chart_path = os.path.join(os.getcwd(), img_path)
+        chart_image = Image(chart)
+        chart_image.save(chart_path)
+        
+        # Paste chart into the specified slide in PowerPoint
+        slide = ppt.slides[dst_slide - 1]
+        left = shape_left if shape_left else 0
+        top = shape_top if shape_top else 0
+        height = shape_height if shape_height else chart_image.height
+        width = shape_width if shape_width else chart_image.width
+        slide.shapes.add_picture(chart_path, left, top, width=width, height=height)
+        
+        # Remove temporary image file
+        os.remove(chart_path)
+    
+    except Exception as e:
+        print(f"Error in copy_excel_objects function: {str(e)}")
+
+# Function to add a worksheet with a specified name
+def add_worksheet(wb, sheet_name):
+    try:
+        # Add new worksheet after the last sheet
+        ws = wb.create_sheet(title=sheet_name)
+    except Exception as e:
+        print(f"Error in add_worksheet function: {str(e)}")
+
+# Function to check if a directory exists
+def dir_exists(s_directory):
+    return os.path.isdir(s_directory)
+
+# Function to copy a summary sheet to a new workbook
+def copy_summary_sheet_to_new_wb(report_summary_location, compare_flag):
+    try:
+        from shutil import copy
+        
+        # Create a new workbook
+        new_wb_path = os.path.join(report_summary_location, "new_summary.xlsx")
+        new_wb = openpyxl.Workbook()
+        
+        # Copy sheets based on the compare flag
+        wb = openpyxl.load_workbook(report_summary_location)
+        if compare_flag == "NO":
+            new_wb.create_sheet("ResultSummary")
+            for sheet_name in wb.sheetnames:
+                if sheet_name == "ResultSummary":
+                    new_wb[sheet_name] = wb[sheet_name]
+        elif compare_flag == "YES":
+            for sheet_name in wb.sheetnames:
+                if sheet_name.startswith("ResultSummary"):
+                    new_wb.create_sheet(sheet_name)
+                    new_wb[sheet_name] = wb[sheet_name]
+        
+        # Save the new workbook
+        new_wb.save(new_wb_path)
+        
+        return True
+    
+    except Exception as e:
+        print(f"Error in copy_summary_sheet_to_new_wb function: {str(e)}")
+        return False
+
+# Function to create a PowerPoint report from a template
+def create_ppt_report():
+    try:
+        from pptx import Presentation
+        from pptx.util import Inches
+        
+        # Define paths
+        template_ppt = "C:\\LR\\reports\\PES_Report_Template.pptx"
+        output_ppt = "C:\\LR\\reports\\PES_Report_11.pptx"
+        
+        # Open existing PowerPoint instance with the template
+        ppt = Presentation(template_ppt)
+        
+        # Update headers in the PowerPoint template
+        for slide in ppt.slides:
+            for shape in slide.shapes:
+                if shape.has_text_frame:
+                    for paragraph in shape.text_frame.paragraphs:
+                        for run in paragraph.runs:
+                            if "ProjectName" in run.text:
+                                run.text = run.text.replace("ProjectName", "Report_Project_Name")
+        
+        # Save the PowerPoint presentation
+        ppt.save(output_ppt)
+    
+    except Exception as e:
+        print(f"Error in create_ppt_report subroutine: {str(e)}")
+
+# Function to add an OLE object to a PowerPoint slide
+def add_ole_object_to_ppt(ppt, slide_num, file_name):
+    try:
+        from pptx import Presentation
+        from pptx.util import Inches
+        
+        # Set the target slide
+        slide = ppt.slides[slide_num - 1]
+        
+        # Add OLE object to the slide
+        left = Inches(1.5)
+        top = Inches(1.5)
+        slide.shapes.add_movie(file_name, left, top, width=Inches(2), height=Inches(2))
+    
+    except Exception as e:
+        print(f"Error in add_ole_object_to_ppt function: {str(e)}")
+
+# Function to execute queries against an MDB database
+def execute_access_results(p_data_source, p_query, v_location, p_query_name):
+    try:
+        import pyodbc
+        
+        # Define connection string
+        conn_str = r"Driver={{Microsoft Access Driver (*.mdb, *.accdb)}};DBQ={}".format(p_data_source)
+        
+        # Clean up the worksheet
+        clean_up(v_location)
+        
+        # Open connection
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
+        
+        # Execute query
+        cursor.execute(p_query)
+        
+        # Get column names
+        columns = [column[0] for column in cursor.description]
+        
+        # Populate worksheet with recordset data
+        sheet = wb[v_location]
+        sheet.append(columns)
+        for row in cursor.fetchall():
+            sheet.append(row)
+        
+        # Close connection
+        cursor.close()
+        conn.close()
+        
+        # Set the query name in the worksheet
+        sheet['A1'] = p_query_name
+    
+    except Exception as e:
+        print(f"Error in execute_access_results subroutine: {str(e)}")
+
+# Function to open an existing PowerPoint instance
+def open_existing_ppt_instance(ppt_file_path, template_ppt):
+    try:
+        from pptx import Presentation
+        from pptx.util import Inches
+        
+        # Open existing PowerPoint instance
+        ppt = Presentation(template_ppt)
+        
+        # Update content with data from Excel
+        for slide in ppt.slides:
+            for shape in slide.shapes:
+                if shape.has_text_frame:
+                    for paragraph in shape.text_frame.paragraphs:
+                        for run in paragraph.runs:
+                            if "###" in run.text:
+                                run.text = run.text.replace("###", "")
+        
+        # Save the PowerPoint presentation
+        ppt.save(ppt_file_path)
+        
+        return ppt
+    
+    except Exception as e:
+        print(f"Error in open_existing_ppt_instance function: {str(e)}")
+        return None
+
+# Function to retrieve data from a specified URL
+def retrieve_data_from_url(str_url, str_header):
+    try:
+        # Send GET request to the URL with headers
+        response = requests.get(str_url, headers={'Authorization': str_header})
+        
+        # Return response content
+        return response.content.decode('utf-8')
+    
+    except Exception as e:
+        print(f"Error in retrieve_data_from_url function: {str(e)}")
+        return ""
+
+# Function to draw a border around a range of cells in Excel
+def draw_border(v_location, v_range, line_style, line_weight):
+    try:
+        from openpyxl.styles import Border, Side
+        
+        # Define border styles
+        thin_border = Border(
+            left=Side(style=line_style, color='000000'),
+            right=Side(style=line_style, color='000000'),
+            top=Side(style=line_style, color='000000'),
+            bottom=Side(style=line_style, color='000000')
+        )
+        
+        # Apply border to the specified range
+        for row in v_range:
+            for cell in row:
+                cell.border = thin_border
+    
+    except Exception as e:
+        print(f"Error in draw_border subroutine: {str(e)}")
+
+# Function to add text to a PowerPoint slide
+def add_text_to_ppt(ppt, slide_num, text, font_size):
+    try:
+        # Set the target slide
+        slide = ppt.slides[slide_num - 1]
+        
+        # Add text to the slide
+        text_box = slide.shapes.add_textbox(left=0, top=0, width=Inches(2), height=Inches(2))
+        text_frame = text_box.text_frame
+        text_frame.text = text
+        for paragraph in text_frame.paragraphs:
+            for run in paragraph.runs:
+                run.font.size = font_size
+    
+    except Exception as e:
+        print(f"Error in add_text_to_ppt function: {str(e)}")
+
+# Function to update text in a PowerPoint slide
+def update_text_in_ppt(ppt, slide_num, text_to_find, replacement_text):
+    try:
+        # Set the target slide
+        slide = ppt.slides[slide_num - 1]
+        
+        # Update text in the slide
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                for paragraph in shape.text_frame.paragraphs:
+                    for run in paragraph.runs:
+                        if text_to_find in run.text:
+                            run.text = run.text.replace(text_to_find, replacement_text)
+    
+    except Exception as e:
+        print(f"Error in update_text_in_ppt function: {str(e)}")
+
+# Function to add a chart to a PowerPoint slide
+def add_chart_to_ppt(ppt, slide_num, chart_data, chart_type, chart_title):
+    try:
+        from pptx.chart.data import ChartData
+        from pptx.enum.chart import XL_CHART_TYPE
+        
+        # Set the target slide
+        slide = ppt.slides[slide_num - 1]
+        
+        # Define chart data
+        chart_data = ChartData()
+        chart_data.categories = chart_data.categories
+        chart_data.add_series(chart_data.series)
+        
+        # Add chart to the slide
+        x, y, cx, cy = Inches(2), Inches(2), Inches(6), Inches(4.5)
+        chart = slide.shapes.add_chart(
+            XL_CHART_TYPE.LINE, x, y, cx, cy, chart_data
+        ).chart
+        
+        # Add chart title
+        chart.has_title = True
+        chart.chart_title.text_frame.text = chart_title
+    
+    except Exception as e:
+        print(f"Error in add_chart_to_ppt function: {str(e)}")
+
+# Function to run a query and export results to Excel
+def run_query_and_export_to_excel(query, wb, sheet_name):
+    try:
+        # Execute query and get results
+        results = execute_query(query)
+        
+        # Get or create worksheet
+        ws = wb[sheet_name] if sheet_name in wb.sheetnames else wb.create_sheet(sheet_name)
+        
+        # Write results to worksheet
+        for row_index, row_data in enumerate(results, start=1):
+            for col_index, value in enumerate(row_data, start=1):
+                cell = ws.cell(row=row_index, column=col_index, value=value)
+    
+    except Exception as e:
+        print(f"Error in run_query_and_export_to_excel function: {str(e)}")
+
+# Function to execute a query and return results
+def execute_query(query):
+    try:
+        # Execute query using appropriate method
+        # (e.g., using SQLAlchemy, pandas, or another library)
+        # For demonstration, returning dummy data
+        return [[1, 'John'], [2, 'Jane']]
+    
+    except Exception as e:
+        print(f"Error in execute_query function: {str(e)}")
+        return []
+
+# Function to add a column in Excel
+def add_column_to_excel(v_location, col_letter, col_name, col_position):
+    try:
+        # Select the specified sheet
+        sheet = wb[v_location]
+        
+        # Insert column at specified position
+        sheet.insert_cols(col_position)
+        
+        # Set column header
+        sheet[f"{col_letter}1"] = col_name
+    
+    except Exception as e:
+        print(f"Error in add_column_to_excel function: {str(e)}")
+
+# Function to apply formatting to a range of cells in Excel
+def apply_formatting_to_range(v_location, v_range, format_style):
+    try:
+        # Define formatting styles
+        from openpyxl.styles import Font
+        
+        # Apply formatting to the specified range
+        for row in v_range:
+            for cell in row:
+                cell.font = Font(size=format_style)
+    
+    except Exception as e:
+        print(f"Error in apply_formatting_to_range subroutine: {str(e)}")
+
+# Function to save Excel workbook
+def save_excel_wb(wb, wb_full_name):
+    try:
+        # Save workbook to specified path
+        wb.save(wb_full_name)
+    
+    except Exception as e:
+        print(f"Error in save_excel_wb function: {str(e)}")
+
+# Function to create a chart in Excel
+def create_chart_in_excel(v_location, chart_type, chart_range, chart_title):
+    try:
+        # Select the specified sheet
+        sheet = wb[v_location]
+        
+        # Create a new chart
+        chart = openpyxl.chart.Chart(chart_type)
+        
+        # Set chart data
+        chart.add_data(chart_range)
+        
+        # Set chart title
+        chart.title = chart_title
+        
+        # Add chart to the sheet
+        sheet.add_chart(chart, "A10")
+    
+    except Exception as e:
+        print(f"Error in create_chart_in_excel function: {str(e)}")
+
+# Function to get cell value from Excel sheet
+def get_cell_value(v_location, v_cell):
+    try:
+        # Select the specified sheet
+        sheet = wb[v_location]
+        
+        # Get value of the specified cell
+        return sheet[v_cell].value
+    
+    except Exception as e:
+        print(f"Error in get_cell_value function: {str(e)}")
+        return ""
+
+# Function to set cell value in Excel sheet
+def set_cell_value(v_location, v_cell, v_value):
+    try:
+        # Select the specified sheet
+        sheet = wb[v_location]
+        
+        # Set value of the specified cell
+        sheet[v_cell] = v_value
+    
+    except Exception as e:
+        print(f"Error in set_cell_value function: {str(e)}")
+
+# Function to draw a border around a range of cells in Excel
+def draw_border(v_location, v_range, line_style, line_weight):
+    try:
+        from openpyxl.styles import Border, Side
+        
+        # Define border styles
+        thin_border = Border(
+            left=Side(style=line_style, color='000000'),
+            right=Side(style=line_style, color='000000'),
+            top=Side(style=line_style, color='000000'),
+            bottom=Side(style=line_style, color='000000')
+        )
+        
+        # Apply border to the specified range
+        for row in v_range:
+            for cell in row:
+                cell.border = thin_border
+    
+    except Exception as e:
+        print(f"Error in draw_border subroutine: {str(e)}")
+
+import openpyxl
+from datetime import datetime, timedelta
+
+# Load the workbook
+wb = openpyxl.load_workbook('path_to_your_excel_file.xlsx')
+
+# Access the sheet 'TestLaunchConfig'
+sheet = wb['TestLaunchConfig']
+
+# Initialize variables based on cell values
+PC_ServerName = sheet.cell(row=2, column=2).value
+PC_ProjectName = sheet.cell(row=3, column=2).value
+PC_DomainName = sheet.cell(row=4, column=2).value
+PC_UserCreds = sheet.cell(row=5, column=2).value
+DT_Public_API_Token = sheet.cell(row=6, column=2).value
+DI_Group_Server_Flag = sheet.cell(row=7, column=2).value
+selectedApplicationName = sheet.cell(row=8, column=2).value
+Report_Project_Name = sheet.cell(row=9, column=2).value
+Report_Release_ID = sheet.cell(row=10, column=2).value
+Report_Project_ID = sheet.cell(row=11, column=2).value
+Report_Project_Workstream = sheet.cell(row=12, column=2).value
+Report_Project_ASM = sheet.cell(row=13, column=2).value
+Report_Date = sheet.cell(row=14, column=2).value
+Report_Template_Path = sheet.cell(row=15, column=2).value
+
+# Extracting DestFolder from Report_Template_Path
+DestFolder = Report_Template_Path[:Report_Template_Path.rfind("\\")]
+
+# Generating output ExcelLocation based on current timestamp
+outputExcelLocation = f"{DestFolder}\\outputExcel_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
+
+pythonExecLocation = sheet.cell(row=16, column=2).value
+pythonExecutableFileName = sheet.cell(row=17, column=2).value
+CompareRun_Flag = sheet.cell(row=18, column=2).value
+
+# RUN 1
+Run1_RunID = sheet.cell(row=20, column=2).value
+Run1_LrSteadyStartDuration = sheet.cell(row=21, column=2).value
+Run1_LrSteadyEndDuration = sheet.cell(row=22, column=2).value
+Run1_LrChartResolution = int(sheet.cell(row=23, column=2).value)
+Run1_Dynatrace_HoursDuration = sheet.cell(row=24, column=2).value
+Run1_Dynatrace_FromDuration = sheet.cell(row=25, column=2).value
+Run1_Dynatrace_ToDuration = sheet.cell(row=26, column=2).value
+
+# Adjusting Dynatrace FromDuration and ToDuration to GMT+5 (EST)
+is_dst = bool(datetime.now().dst())
+Run1_Dynatrace_FromDuration = (datetime.strptime(Run1_Dynatrace_FromDuration, "%Y-%m-%d %H:%M") + timedelta(hours=4 if is_dst else 5)).strftime("%Y-%m-%d %H:%M")
+Run1_Dynatrace_ToDuration = (datetime.strptime(Run1_Dynatrace_ToDuration, "%Y-%m-%d %H:%M") + timedelta(hours=4 if is_dst else 5)).strftime("%Y-%m-%d %H:%M")
+
+Run1_DTChartResolution = int(sheet.cell(row=27, column=2).value)
+
+# RUN 2
+Run2_RunID = sheet.cell(row=29, column=2).value
+Run2_LrSteadyStartDuration = sheet.cell(row=30, column=2).value
+Run2_LrSteadyEndDuration = sheet.cell(row=31, column=2).value
+Run2_LrChartResolution = int(sheet.cell(row=32, column=2).value)
+Run2_Dynatrace_HoursDuration = sheet.cell(row=33, column=2).value
+Run2_Dynatrace_FromDuration = sheet.cell(row=34, column=2).value
+Run2_Dynatrace_ToDuration = sheet.cell(row=35, column=2).value
+
+# Adjusting Dynatrace FromDuration and ToDuration to GMT+5 (EST)
+Run2_Dynatrace_FromDuration = (datetime.strptime(Run2_Dynatrace_FromDuration, "%Y-%m-%d %H:%M") + timedelta(hours=4 if is_dst else 5)).strftime("%Y-%m-%d %H:%M")
+Run2_Dynatrace_ToDuration = (datetime.strptime(Run2_Dynatrace_ToDuration, "%Y-%m-%d %H:%M") + timedelta(hours=4 if is_dst else 5)).strftime("%Y-%m-%d %H:%M")
+
+Run2_DTChartResolution = int(sheet.cell(row=36, column=2).value)
+
+# RUN 3
+Run3_RunID = sheet.cell(row=38, column=2).value
+Run3_LrSteadyStartDuration = sheet.cell(row=39, column=2).value
+Run3_LrSteadyEndDuration = sheet.cell(row=40, column=2).value
+Run3_LrChartResolution = int(sheet.cell(row=41, column=2).value)
+Run3_Dynatrace_HoursDuration = sheet.cell(row=42, column=2).value
+Run3_Dynatrace_FromDuration = sheet.cell(row=43, column=2).value
+Run3_Dynatrace_ToDuration = sheet.cell(row=44, column=2).value
+
+# Adjusting Dynatrace FromDuration and ToDuration to GMT+5 (EST)
+Run3_Dynatrace_FromDuration = (datetime.strptime(Run3_Dynatrace_FromDuration, "%Y-%m-%d %H:%M") + timedelta(hours=4 if is_dst else 5)).strftime("%Y-%m-%d %H:%M")
+Run3_Dynatrace_ToDuration = (datetime.strptime(Run3_Dynatrace_ToDuration, "%Y-%m-%d %H:%M") + timedelta(hours=4 if is_dst else 5)).strftime("%Y-%m-%d %H:%M")
+
+Run3_DTChartResolution = int(sheet.cell(row=45, column=2).value)
+
+# Save the workbook if you've made any changes
+# wb.save('path_to_your_excel_file.xlsx')
+
+
+def reorganize_data_points_2d(dump_sheet, final_sheet, excel_file):
+    wb = load_workbook(excel_file)
+    ws_dump = wb[dump_sheet]
+    ws_final = wb.create_sheet(final_sheet)
+
+    # Copy data from dump sheet to final sheet with transposition
+    rows = list(ws_dump.iter_rows(values_only=True))
+    transposed = list(zip(*rows))
+    
+    for row_idx, row in enumerate(transposed, 1):
+        for col_idx, value in enumerate(row, 1):
+            ws_final.cell(row=row_idx, column=col_idx, value=value)
+
+    # Format columns
+    ws_final.column_dimensions['A'].width = 20
+    for col in range(2, len(transposed) + 1):
+        col_letter = get_column_letter(col)
+        ws_final.column_dimensions[col_letter].width = 15
+
+    wb.save(excel_file)
+
+
+import pyodbc
+from openpyxl import Workbook, load_workbook
+
+def execute_access_results(data_source, query, sheet_name, query_name, excel_file):
+    # Connect to MDB file
+    conn_str = (
+        r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
+        r'DBQ=' + data_source + ';'
+    )
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+    cursor.execute(query)
+    
+    # Fetch results
+    columns = [desc[0] for desc in cursor.description]
+    rows = cursor.fetchall()
+    
+    # Load Excel workbook and sheet
+    wb = load_workbook(excel_file) if os.path.exists(excel_file) else Workbook()
+    if sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        wb.remove(ws)
+    ws = wb.create_sheet(sheet_name)
+    
+    # Write headers
+    for col_idx, col_name in enumerate(columns, 1):
+        ws.cell(row=1, column=col_idx, value=col_name)
+    
+    # Write data
+    for row_idx, row in enumerate(rows, 2):
+        for col_idx, value in enumerate(row, 1):
+            ws.cell(row=row_idx, column=col_idx, value=value)
+    
+    # Save workbook
+    wb.save(excel_file)
+    cursor.close()
+    conn.close()
+
+
+from pptx import Presentation
+from pptx.util import Inches
+
+def add_object_to_ppt(ppt_file, slide_num, file_name):
+    prs = Presentation(ppt_file)
+    slide = prs.slides[slide_num - 1]
+
+    # Add object to slide
+    slide.shapes.add_picture(file_name, left=Inches(5.35), top=Inches(1.6), width=Inches(2), height=Inches(3))
+    
+    prs.save(ppt_file)
+
+
+from datetime import datetime
+import pytz
+
+def is_dst(dt, timezone):
+    tz = pytz.timezone(timezone)
+    aware_dt = tz.localize(dt, is_dst=None)
+    return aware_dt.dst() != timedelta(0)
+
+# Example usage
+date_to_check = datetime(2024, 6, 21)
+timezone = 'US/Eastern'
+result = is_dst(date_to_check, timezone)
+
+print(f"The date {date_to_check} is {'within' if result else 'not within'} Daylight Saving Time.")
+
+
+from datetime import datetime, timezone, timedelta
+import pytz
+
+def unix_to_est(unix_timestamp):
+    utc_dt = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc)
+    est = pytz.timezone('US/Eastern')
+    est_dt = utc_dt.astimezone(est)
+    
+    return est_dt
+
+# Example usage
+unix_timestamp = 1711569000  # Example Unix timestamp
+est_datetime = unix_to_est(unix_timestamp)
+
+print(f"The EST date and time is: {est_datetime}")
+
+
+import openpyxl
+import pyodbc
+
+# Function to clean up the worksheet
+def clean_up(sheet):
+    if sheet.title in wb.sheetnames:
+        wb.remove(sheet)
+    wb.create_sheet(sheet.title)
+
+# Function to perform custom lookup (similar to VLookup)
+def custom_vlookup(sheet, lookup_value, column_index):
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        if row[0] == lookup_value:
+            return row[column_index - 1]
+    return None
+
+# Open the workbook
+wb = openpyxl.load_workbook('your_workbook.xlsx')
+sheets = wb.sheetnames
+
+# Clean up the ResultSummary sheet
+if 'ResultSummary' in wb.sheetnames:
+    rs_sheet = wb['ResultSummary']
+    wb.remove(rs_sheet)
+wb.create_sheet('ResultSummary')
+rs_sheet = wb['ResultSummary']
+
+# Initialize variables
+dictionary = {}
+result_sheets = [sheet for sheet in sheets if sheet.startswith('ResultSummary_')]
+
+# Populate the dictionary with transaction names from source sheets
+for sheet_name in result_sheets:
+    sheet = wb[sheet_name]
+    for row in sheet.iter_rows(min_row=8, values_only=True):
+        dictionary[row[0]] = 1
+
+# Write transaction names to ResultSummary
+rs_sheet['A1'] = 'Transaction Names'
+for i, sheet_name in enumerate(result_sheets):
+    run_id = sheet_name.split('_')[1]
+    rs_sheet.cell(row=1, column=3 + i, value=f'RunID = {run_id}\n90th Percentile RT')
+    rs_sheet.cell(row=1, column=len(result_sheets) + i + 4, value=f'RunID = {run_id}\nPassed Trx Count')
+
+rs_sheet.cell(row=1, column=len(result_sheets) + 3, value='Trx Count SLA')
+
+# Populate the ResultSummary with transaction data
+for ictr, key in enumerate(dictionary.keys(), start=2):
+    rs_sheet.cell(row=ictr, column=1, value=key)
+    sla_sheet = wb['SLA']
+    rs_sheet.cell(row=ictr, column=2, value=custom_vlookup(sla_sheet, key, 2))
+    rs_sheet.cell(row=ictr, column=3 + len(result_sheets), value=custom_vlookup(sla_sheet, key, 3))
+
+# Save the workbook
+wb.save('your_workbook.xlsx')
+
+
+from openpyxl import load_workbook
+from openpyxl.chart import ScatterChart, Reference, Series
+
+def create_graph_custom(filename, sheet_name, chart_name, x_axis_name, y_axis_name):
+    # Load the workbook and select the sheet
+    wb = load_workbook(filename)
+    ws = wb[sheet_name]
+
+    # Determine the last row and column with data
+    l_row = ws.max_row
+    l_col = ws.max_column
+
+    # Create a chart object
+    chart = ScatterChart()
+    chart.title = chart_name
+    chart.style = 2
+    chart.x_axis.title = x_axis_name
+    chart.y_axis.title = y_axis_name
+
+    # Define data for the chart
+    x_values = Reference(ws, min_col=1, min_row=2, max_row=l_row)
+    for col in range(2, l_col + 1):
+        y_values = Reference(ws, min_col=col, min_row=2, max_row=l_row)
+        series = Series(y_values, x_values, title_from_data=True)
+        chart.series.append(series)
+
+    # Add the chart to the worksheet
+    ws.add_chart(chart, "E5")
+
+    # Save the workbook
+    wb.save(filename)
+
+# Usage example
+create_graph_custom('your_workbook.xlsx', 'Sheet1', 'Custom Chart', 'Time', 'Values')
+
+
+
+
+import os
+
+def main():
+    # Paths and queries
+    excel_file = 'file.xlsx'
+    db_path = 'database.mdb'
+    ppt_file = 'presentation.pptx'
+    image_file = 'image.png'
+    
+    # Execute query and store results in Excel
+    query1 = "SELECT * FROM Table1"
+    execute_access_results(db_path, query1, "Sheet1", "Query 1", excel_file)
+    
+    # Reorganize data in Excel
+    reorganize_data_points_2d('Sheet1', 'FinalSheet', excel_file)
+    
+    # Add object to PowerPoint
+    add_object_to_ppt(ppt_file, 1, image_file)
+
+if __name__ == "__main__":
+    main()

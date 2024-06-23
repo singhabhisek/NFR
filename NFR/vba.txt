@@ -1,0 +1,2151 @@
+     +-----------------+
+     |     Wrapper     |
+     +-----------------+
+             |
+             | calls InitializeVariables
+             |
+             | calls DeleteWorksheets
+             |
+             | calls LoginToPC_GetResults for Run1
+             |
+             |    if CompareRun_Flag is "YES"
+             |    /               \
+             |   /                 \
+             | calls LoginToPC_GetResults for Run2 (optional)
+             |   \ calls CallAccessQuery
+             |    \
+             |     calls LoginToPC_GetResults for Run3 (optional)
+             |
+             | calls CleanFormattingResultSummary
+             |
+             | calls ConsolidateTransactionNames
+             |
+             | calls CopySummarySheetToExcel
+             |
+             | calls OpenExistingPPTInstance
+             |
+             | calls RetrieveDynatraceHostServerUtilizationData
+             |
+             | calls CreateChartsForWorksheets
+             |
+             | calls HighlightExceedELA
+             |
+             | calls CloseWorkbook
+             |
+             | calls ActiveWorkbook.Save
+             |
+             | calls DeleteFile for ResultSummaryFile
+             |
+             | calls DeleteFile for outputExcelLocation
+             |
+             | updates TextLaunchConfig with completion message
+             |
+             | resets Application settings
+             |
+             +-----------------+
+
+
+Sub InitializeVariables()
+    ' Declare variables
+    Dim PC_ServerName As String
+    Dim PC_ProjectName As String
+    Dim PC_DomainName As String
+    Dim PC_UserCreds As String
+    Dim DT_Public_API_Token As String
+    Dim DT_Group_Server_Flag As String
+    Dim selectedApplicationName As String
+    Dim Report_Project_Name As String
+    Dim Report_Release_ID As String
+    Dim Report_Project_ID As String
+    Dim Report_Project_Workstream As String
+    Dim Report_Project_ASM As String
+    Dim Report_Date As String
+    Dim Report_Template_Path As String
+    Dim DestFolder As String
+    Dim outputExcelLocation As String
+    Dim pythonExecLocation As String
+    Dim pythonExecutableFileName As String
+    Dim CompareRun_Flag As String
+    
+    ' Variables for RUN 1
+    Dim Run1_RunID As String
+    Dim Run1_LrSteadyStartDuration As String
+    Dim Run1_LrSteadyEndDuration As String
+    Dim Run1_LrChartResolution As Integer
+    Dim Run1_Dynatrace_HoursDuration As String
+    Dim Run1_Dynatrace_FromDuration As String
+    Dim Run1_Dynatrace_ToDuration As String
+    Dim Run1_DTChartResolution As String
+    
+    ' Variables for RUN 2
+    Dim Run2_RunID As String
+    Dim Run2_LrSteadyStartDuration As String
+    Dim Run2_LrSteadyEndDuration As String
+    Dim Run2_LrChartResolution As Integer
+    Dim Run2_Dynatrace_HoursDuration As String
+    Dim Run2_Dynatrace_FromDuration As String
+    Dim Run2_Dynatrace_ToDuration As String
+    Dim Run2_DTChartResolution As String
+    
+    ' Variables for RUN 3
+    Dim Run3_RunID As String
+    Dim Run3_LrSteadyStartDuration As String
+    Dim Run3_LrSteadyEndDuration As String
+    Dim Run3_LrChartResolution As Integer
+    Dim Run3_Dynatrace_HoursDuration As String
+    Dim Run3_Dynatrace_FromDuration As String
+    Dim Run3_Dynatrace_ToDuration As String
+    Dim Run3_DTChartResolution As String
+    
+    ' Initialize variables based on user input from "TestLaunchConfig" sheet
+    With Sheets("TestLaunchConfig")
+        PC_ServerName = .Cells(2, 2).Value
+        PC_ProjectName = .Cells(3, 2).Value
+        PC_DomainName = .Cells(4, 2).Value
+        PC_UserCreds = .Cells(5, 2).Value
+        DT_Public_API_Token = .Cells(6, 2).Value
+        DT_Group_Server_Flag = .Cells(7, 2).Value
+        selectedApplicationName = .Cells(8, 2).Value
+        Report_Project_Name = .Cells(9, 2).Value
+        Report_Release_ID = .Cells(10, 2).Value
+        Report_Project_ID = .Cells(11, 2).Value
+        Report_Project_Workstream = .Cells(12, 2).Value
+        Report_Project_ASM = .Cells(13, 2).Value
+        Report_Date = .Cells(14, 2).Value
+        Report_Template_Path = .Cells(15, 2).Value
+        
+        ' Calculate DestFolder
+        DestFolder = Mid(Report_Template_Path, 1, InStr(4, Report_Template_Path, "\") - 1)
+        
+        ' Construct output ExcelLocation
+        outputExcelLocation = DestFolder & "outputExcel_" & Format(Now(), "yyyyMMddhhmmss") & ".xlsx"
+        
+        pythonExecLocation = .Cells(16, 2).Value
+        pythonExecutableFileName = .Cells(17, 2).Value
+        CompareRun_Flag = .Cells(18, 2).Value
+        
+        ' Initialize variables for RUN 1
+        Run1_RunID = .Cells(20, 2).Value
+        Run1_LrSteadyStartDuration = .Cells(21, 2).Value
+        Run1_LrSteadyEndDuration = .Cells(22, 2).Value
+        Run1_LrChartResolution = CInt(.Cells(23, 2).Value)
+        Run1_Dynatrace_HoursDuration = .Cells(24, 2).Value
+        Run1_Dynatrace_FromDuration = .Cells(25, 2).Value
+        Run1_Dynatrace_ToDuration = .Cells(26, 2).Value
+        
+        ' Adjust Dynatrace durations from GMT to EST
+        Run1_Dynatrace_FromDuration = Format(DateAdd("h", IIf(IsDST(Date), 4, 5), CDate(Run1_Dynatrace_FromDuration)), "YYYY-MM-DD hh:nn")
+        Run1_Dynatrace_ToDuration = Format(DateAdd("h", IIf(IsDST(Date), 4, 5), CDate(Run1_Dynatrace_ToDuration)), "YYYY-MM-DD hh:nn")
+        
+        Run1_DTChartResolution = .Cells(27, 2).Value
+        
+        ' Initialize variables for RUN 2 (if applicable)
+        If Len(Trim(.Cells(29, 2).Value)) > 0 Then
+            Run2_RunID = .Cells(29, 2).Value
+            Run2_LrSteadyStartDuration = .Cells(30, 2).Value
+            Run2_LrSteadyEndDuration = .Cells(31, 2).Value
+            Run2_LrChartResolution = CInt(.Cells(32, 2).Value)
+            Run2_Dynatrace_HoursDuration = .Cells(33, 2).Value
+            Run2_Dynatrace_FromDuration = .Cells(34, 2).Value
+            Run2_Dynatrace_ToDuration = .Cells(35, 2).Value
+            
+            ' Adjust Dynatrace durations from GMT to EST for RUN 2
+            Run2_Dynatrace_FromDuration = Format(DateAdd("h", IIf(IsDST(Date), 4, 5), CDate(Run2_Dynatrace_FromDuration)), "YYYY-MM-DD hh:nn")
+            Run2_Dynatrace_ToDuration = Format(DateAdd("h", IIf(IsDST(Date), 4, 5), CDate(Run2_Dynatrace_ToDuration)), "YYYY-MM-DD hh:nn")
+            
+            Run2_DTChartResolution = .Cells(36, 2).Value
+        End If
+        
+        ' Initialize variables for RUN 3 (if applicable)
+        If Len(Trim(.Cells(38, 2).Value)) > 0 Then
+            Run3_RunID = .Cells(38, 2).Value
+            Run3_LrSteadyStartDuration = .Cells(39, 2).Value
+            Run3_LrSteadyEndDuration = .Cells(40, 2).Value
+            Run3_LrChartResolution = CInt(.Cells(41, 2).Value)
+            Run3_Dynatrace_HoursDuration = .Cells(42, 2).Value
+            Run3_Dynatrace_FromDuration = .Cells(43, 2).Value
+            Run3_Dynatrace_ToDuration = .Cells(44, 2).Value
+            
+            ' Adjust Dynatrace durations from GMT to EST for RUN 3
+            Run3_Dynatrace_FromDuration = Format(DateAdd("h", IIf(IsDST(Date), 4, 5), CDate(Run3_Dynatrace_FromDuration)), "YYYY-MM-DD hh:nn")
+            Run3_Dynatrace_ToDuration = Format(DateAdd("h", IIf(IsDST(Date), 4, 5), CDate(Run3_Dynatrace_ToDuration)), "YYYY-MM-DD hh:nn")
+            
+            Run3_DTChartResolution = .Cells(45, 2).Value
+        End If
+    End With
+End Sub
+
+
+Option Explicit
+
+' Main procedure to initiate the entire workflow
+Sub Wrapper()
+    On Error GoTo ErrorHandler
+    
+    ' Turn off alerts and screen updating for smoother execution
+    Application.DisplayAlerts = False
+    Application.ScreenUpdating = False
+    
+    ' Initialize variables and generate random number
+    Application.StatusBar = "Initializing Variables..."
+    InitializeVariables
+    Dim randomNumber As String
+    randomNumber = Format(Now(), "hhmmss") & Int((1111 + Rnd() * (9999 - 1111 + 1)))
+    Dim ResultSummaryFile As String
+    ResultSummaryFile = DestFolder & "ResultSummary_" & randomNumber & ".xlsx"
+    
+    ' Check Dynatrace duration; if more than 6 hours, prompt user
+    If (Round((CDate(Run1_Dynatrace_ToDuration) - CDate(Run1_Dynatrace_FromDuration)) * 24, 2)) > 6 Then
+        Dim userResponse As VbMsgBoxResult
+        userResponse = MsgBox("Ensure Dynatrace granularity (XXXX) is set to 10m or more if Dynatrace duration is more than 6 hours. Click NO to end program and edit", vbYesNo + vbQuestion)
+        If userResponse = vbNo Then
+            MsgBox "You cancelled"
+            Exit Sub
+        End If
+    End If
+    
+    ' Clean up existing sheets
+    Application.StatusBar = "Cleaning up the sheets..."
+    DeleteWorksheets
+    
+    ' Add new worksheet for Result Summary
+    Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & Run1_RunID
+    
+    ' Extract path location
+    ExtractPathLocation = Mid(ReportTemplatePath, 1, InStr(4, ReportTemplatePath, "\") - 1)
+    
+    ' Execute PC API for Run1
+    Application.StatusBar = "Executing PC API for Run1..."
+    If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, Run1_RunID, sheetName) Then
+        GoTo CleanUpAndExit
+    End If
+    
+    Application.StatusBar = "Retrieving LoadRunner Metrics from Result..."
+    Call CallAccessQuery(unzipToPath, Run1_LrChartResolution)
+    
+    ' If CompareRun_Flag is YES, proceed with Run2 and optionally for Run3
+    If UCase(CompareRun_Flag) = "YES" Then
+        If Len(Trim(Run2_RunID)) > 0 Then
+            Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & CStr(Run2_RunID)
+            Application.StatusBar = "Executing PC API for Run2..."
+            If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, CStr(Run2_RunID), sheetName) Then
+                GoTo CleanUpAndExit
+            End If
+        End If
+        
+        If Len(Trim(Run3_RunID)) > 0 Then
+            Sheets.Add(After:=Sheets(Sheets.Count)).Name = "ResultSummary_" & CStr(Run3_RunID)
+            Application.StatusBar = "Executing PC API for Run3..."
+            If Not LoginToPC_GetResults(PC_UserCreds, PC_ServerName, PC_ProjectName, PC_DomainName, CStr(Run3_RunID), sheetName) Then
+                GoTo CleanUpAndExit
+            End If
+        End If
+    End If
+    
+    ' Clean formatting for Result Summary
+    Call CleanFormattingResultSummary
+    Call ConsolidateTransactionNames
+    
+    ' Create Result Summary file and copy summary sheet if required
+    Application.StatusBar = "Creating Result Summary File..."
+    Call CopySummarySheetToExcel(ResultSummaryFile, "YES")
+    FormatMainReport "ResultSummary"
+    
+    ' Delete extract folders if they exist
+    If DirExists(extractPathLocation & "\ExtractResult_" & Run1_RunID) Then
+        CreateObject("Scripting.FileSystemObject").DeleteFolder extractPathLocation & "\ExtractResult_" & Run1_RunID
+    End If
+    If DirExists(extractPathLocation & "\ExtractResult_" & CStr(Run2_RunID)) Then
+        CreateObject("Scripting.FileSystemObject").DeleteFolder extractPathLocation & "\ExtractResult_" & CStr(Run2_RunID)
+    End If
+    If DirExists(extractPathLocation & "\ExtractResult_" & CStr(Run3_RunID)) Then
+        CreateObject("Scripting.FileSystemObject").DeleteFolder extractPathLocation & "\ExtractResult_" & CStr(Run3_RunID)
+    End If
+    
+    ' Retrieve Dynatrace data for selected application
+    Application.StatusBar = "Retrieving Dynatrace Data..."
+    RetrieveDynatraceHostServerUtilizationData selectedApplicationName, DT_Group_Server_Flag, Run1_Dynatrace_FromDuration, Run1_Dynatrace_ToDuration, Run1_DTChartResolution, "R" & Run1_RunID
+    
+    ' Start plotting graphs
+    Application.StatusBar = "Starting to plot graphs..."
+    Sheets("RunningServers").Select
+    CreateChartsForWorksheets
+    HighlightExceedELA
+    CloseWorkbook
+    
+    ' Export and prepare report in PPT
+    Application.StatusBar = "Exporting and preparing report in PPT..."
+    OpenExistingPPTInstance DestFolder & "Reports_PES_Report_" & Run1_RunID & ".pptx", ReportTemplatePath, Run1_RunID
+    Sheets("TextLaunchConfig").Select
+    
+    ' Final status message
+    Application.StatusBar = "Done."
+    ActiveWorkbook.Save
+    
+CleanUpAndExit:
+    ' Clean up - delete temporary files
+    DeleteFile ResultSummaryFile
+    DeleteFile outputExcelLocation
+    
+    ' Update launch config sheet with completion message
+    Sheets("TextLaunchConfig").Cells(1, 18) = "Done. Results at: " & Now()
+    
+    ' Reset display alerts and screen updating
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+    
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred: " & Err.Description
+    Resume CleanUpAndExit
+End Sub
+
+' Function to check if directory exists
+Function DirExists(path As String) As Boolean
+    DirExists = CreateObject("Scripting.FileSystemObject").FolderExists(path)
+End Function
+
+' Example of LoginToPC_GetResults function (replace with actual implementation)
+Function LoginToPC_GetResults(PC_UserCreds As String, PC_ServerName As String, PC_ProjectName As String, PC_DomainName As String, RunID As String, sheetName As String) As Boolean
+    ' Replace with actual implementation
+    On Error Resume Next
+    ' Your code to perform PC API login and get results
+    ' Example:
+    ' LoginToPC_GetResults = True ' or False based on success or failure
+    LoginToPC_GetResults = True ' Simulating success for example
+    On Error GoTo 0
+End Function
+
+' Example of RetrieveDynatraceHostServerUtilizationData function (replace with actual implementation)
+Sub RetrieveDynatraceHostServerUtilizationData(selectedApplicationName As String, DT_Group_Server_Flag As Boolean, Run1_Dynatrace_FromDuration As Date, Run1_Dynatrace_ToDuration As Date, Run1_DTChartResolution As String, RunID As String)
+    ' Replace with actual implementation
+    ' Your code to retrieve Dynatrace data
+End Sub
+
+' Example of CreateChartsForWorksheets function (replace with actual implementation)
+Sub CreateChartsForWorksheets()
+    ' Replace with actual implementation
+    ' Your code to create charts for worksheets
+End Sub
+
+' Example of OpenExistingPPTInstance function (replace with actual implementation)
+Sub OpenExistingPPTInstance(pptFilePath As String, reportTemplatePath As String, RunID As String)
+    ' Replace with actual implementation
+    ' Your code to open PowerPoint and prepare report
+End Sub
+
+Option Explicit
+
+' Main procedure to initiate data retrieval, processing, and chart creation
+Sub Wrapper()
+    Dim AppName As String
+    Dim consolidateServerFlag As String
+    Dim DynatraceFromDuration As String
+    Dim DynatraceToDuration As String
+    Dim DTChartResolution As String
+    Dim runID As String
+    
+    ' Set your input parameters here
+    AppName = "nCite"  ' Example app name
+    consolidateServerFlag = "YES"  ' Example flag, adjust as needed
+    DynatraceFromDuration = "2024-06-01T00:00:00Z"  ' Example start time
+    DynatraceToDuration = "2024-06-01T23:59:59Z"    ' Example end time
+    DTChartResolution = "Hourly"  ' Example resolution
+    runID = "123456"  ' Example run ID
+    
+    ' Call function to retrieve Dynatrace data based on app name and flags
+    RetrieveDynatraceHostServerUtilizationData AppName, consolidateServerFlag, DynatraceFromDuration, DynatraceToDuration, DTChartResolution, runID
+    
+    ' Create charts based on retrieved data
+    CreateChartsForWorksheets
+End Sub
+
+' Function to retrieve Dynatrace Host Server Utilization Data
+Function RetrieveDynatraceHostServerUtilizationData(AppName As String, consolidateServerFlag As String, _
+                                                    DynatraceFromDuration As String, DynatraceToDuration As String, _
+                                                    DTChartResolution As String, runID As String)
+    Dim dic As Object
+    Set dic = CreateObject("Scripting.Dictionary")
+    
+    Dim key As String, val As String
+    Dim i As Long
+    Dim arrSplit() As String
+    Dim strServer As String
+    
+    ' Retrieve server names from configuration sheet
+    With Sheets("ServerConfigurationSheet")
+        For i = 2 To .UsedRange.Rows.Count
+            If .Cells(i, 1).Value = AppName Then
+                key = .Cells(i, 1).Value & "&" & .Cells(i, 4).Value
+                val = .Cells(i, 2).Value
+                
+                If Not dic.Exists(key) Then
+                    dic.Add key, val
+                End If
+            End If
+        Next i
+    End With
+    
+    ' Check if servers were found for the given app name
+    If dic.Count < 1 Then
+        MsgBox "No servers matched in configuration sheet. Please check app name."
+        Exit Function
+    End If
+    
+    ' Iterate through each server and create sheets and graphs
+    For Each key In dic.Keys
+        arrSplit = Split(dic(key), ",")
+        
+        If consolidateServerFlag = "YES" Then
+            For i = LBound(arrSplit) To UBound(arrSplit)
+                strServer = strServer & ",""" & arrSplit(i) & """"
+            Next i
+            Call CreateSheetAndGraph(Mid(strServer, 2, Len(strServer)), CStr(key), DynatraceFromDuration, DynatraceToDuration, DTChartResolution, runID)
+            strServer = ""
+        ElseIf consolidateServerFlag = "NO" Then
+            For i = LBound(arrSplit) To UBound(arrSplit)
+                strServer = "," & arrSplit(i) & ","
+                MsgBox strServer
+                Call CreateSheetAndGraph(strServer, CStr(arrSplit(i)), DynatraceFromDuration, DynatraceToDuration, DTChartResolution, runID)
+            Next i
+        End If
+    Next key
+End Function
+
+' Subroutine to create sheets and graphs for server data
+Sub CreateSheetAndGraph(strServer As String, k As String, DynatraceFromDuration As String, DynatraceToDuration As String, _
+                         DTChartResolution As String, runID As String)
+    Dim ServerList As String
+    ServerList = Application.WorksheetFunction.EncodeURL(strServer)
+    
+    ' Create CPU utilization graph
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    ws.Name = CStr(runID) & "_DT_CPU_" & k
+    
+    Application.StatusBar = "Fetching Dynatrace CPU API..."
+    Call GetDynatraceData("builtins:host.cpu.usage", ServerList, DynatraceFromDuration, DynatraceToDuration, DTChartResolution, "DT_CPU_" & k)
+    
+    ' Check if data retrieval was successful
+    If Not checkResultsCPC Then
+        Call GetDynatraceData("builtins:host.cpu.usage", ServerList, DynatraceFromDuration, DynatraceToDuration, DTChartResolution, CStr(runID) & "_DT_CPU_" & k)
+    End If
+    
+    ' Plot CPU utilization graph
+    For i = 1 To Sheets(CStr(runID) & "_DT_CPU_" & k).UsedRange.Columns.Count
+        Sheets(CStr(runID) & "_DT_CPU_" & k).Cells(1, i) = Sheets(CStr(runID) & "_DT_CPU_" & k).Cells(1, i) & "" & getDynatraceDisplayServerName(Sheets(CStr(runID) & "_DT_CPU_" & k).Cells(1, i))
+    Next i
+    
+    Application.StatusBar = "Plotting graph Dynatrace CPU..."
+    Call CreateGraphCustom(CStr(runID) & "_DT_CPU_" & k, "CPU Utilization - " & k, "Elapsed Time", "CPU Utilization")
+    
+    ' Create Memory utilization graph
+    Dim wb As Workbook
+    Set wb = ThisWorkbook
+    
+    ws = wb.Sheets.Add(After:=wb.Sheets(wb.Sheets.Count))
+    ws.Name = CStr(runID) & "_DT_Memory_" & k
+    
+    Application.StatusBar = "Fetching Dynatrace Memory API..."
+    checkResults = GetDynatraceData("builtins:host.mem.usage", ServerList, DynatraceFromDuration, DynatraceToDuration, DTChartResolution, CStr(runID) & "_DT_Memory_" & k)
+    
+    ' Check if data retrieval was successful
+    If Not checkResults Then
+        Call GetDynatraceData("builtins:host.mem.usage", ServerList, DynatraceFromDuration, DynatraceToDuration, DTChartResolution, CStr(runID) & "_DT_Memory_" & k)
+    End If
+    
+    ' Plot Memory utilization graph
+    For i = 1 To Sheets(CStr(runID) & "_DT_Memory_" & k).UsedRange.Columns.Count
+        Sheets(CStr(runID) & "_DT_Memory_" & k).Cells(1, i) = Sheets(CStr(runID) & "_DT_Memory_" & k).Cells(1, i) & "" & getDynatraceDisplayServerName(Sheets(CStr(runID) & "_DT_Memory_" & k).Cells(1, i))
+    Next i
+    
+    Application.StatusBar = "Plotting graph Dynatrace Memory..."
+    Call CreateGraphCustom(CStr(runID) & "_DT_Memory_" & k, "Memory Utilization - " & k, "Elapsed Time", "Memory Utilization")
+End Sub
+
+' Function to create custom graphs based on worksheet data
+Sub CreateChartsForWorksheets()
+    Dim sheetName As String
+    
+    For i = 1 To Sheets.Count
+        sheetName = Sheets(i).Name
+        
+        If sheetName Like "DT_CPU_*" Then
+            Call CreateGraphCustom(sheetName, "CPU Utilization - " & Split(sheetName, "-")(1), "Elapsed Time", "CPU Utilization")
+        ElseIf sheetName Like "DT_Memory_*" Then
+            Call CreateGraphCustom(sheetName, "Memory Utilization - " & Split(sheetName, "-")(1), "Elapsed Time", "Memory Utilization")
+        ElseIf sheetName = "Hits_Per_Sec" Then
+            Call CreateGraphCustom(sheetName, "Hits Per Sec", "Elapsed Time", "Hits Count")
+        ElseIf sheetName = "RunningUsers" Then
+            Call CreateGraphCustom(sheetName, "Running Users", "Elapsed Time", "Users Count")
+        ElseIf sheetName = "Throughput" Then
+            Call CreateGraphCustom(sheetName, "Throughput", "Elapsed Time", "Throughput")
+        ElseIf sheetName = "TPS" Then
+            Call CreateGraphCustom(sheetName, "Transactions Per Sec", "Elapsed Time", "TPS")
+        ElseIf sheetName = "Avg_Resp_Time" Then
+            Call CreateGraphCustom(sheetName, "Average Response Time", "Elapsed Time", "Response Time (sec)")
+        End If
+    Next i
+End Sub
+
+' Function to fetch data from Dynatrace API
+Function GetDynatraceData(metric As String, serverList As String, fromDuration As String, toDuration As String, chartResolution As String, sheetName As String) As Boolean
+    ' Implement your API fetching logic here
+    ' Dummy function for demonstration
+    GetDynatraceData = True ' Assume successful data retrieval
+End Function
+
+' Function to check results of Dynatrace API data fetch
+Function checkResultsCPC() As Boolean
+    ' Dummy function for demonstration
+    checkResultsCPC = True ' Assume successful check
+End Function
+
+' Function to create custom graphs
+Sub CreateGraphCustom(sheetName As String, chartTitle As String, xAxisLabel As String, yAxisLabel As String)
+    ' Implement your graph creation logic here
+    ' Dummy function for demonstration
+End Sub
+
+' Function to get server name for display purposes
+Function getDynatraceDisplayServerName(v As Variant) As String
+    ' Dummy function for demonstration
+    getDynatraceDisplayServerName = ""
+End Function
+
+Option Explicit
+
+' Function to retrieve Dynatrace Host Server Utilization Data
+Function RetrieveDynatraceHostServerUtilizationData(AppName As String, consolidateServerFlag As String, DynatraceFromDuration As String, DynatraceToDuration As String, DTChartResolution As String, runID As String)
+    Dim dic As Object
+    Dim key As String, val As String
+    Dim i As Long
+    Dim strServer As String
+    Dim arrSplit() As String
+    
+    ' Initialize dictionary to store server names
+    Set dic = CreateObject("Scripting.Dictionary")
+    
+    ' Retrieve server names from configuration sheet
+    With Sheets("ServerConfigurationSheet")
+        For i = 2 To .UsedRange.Rows.Count
+            If .Cells(i, 1).Value = AppName Then
+                key = .Cells(i, 1).Value & "-" & .Cells(i, 4).Value
+                val = .Cells(i, 2).Value
+                If Not dic.Exists(key) Then
+                    dic.Add key, val
+                End If
+            End If
+        Next i
+    End With
+    
+    ' Check if any servers matched
+    If dic.Count < 1 Then
+        MsgBox "No servers matched in configuration sheet. Please check app Name."
+        Exit Function
+    End If
+    
+    ' Process each server based on consolidation flag
+    For Each key In dic.Keys
+        arrSplit = Split(dic(key), ",")
+        If consolidateServerFlag = "YES" Then
+            For i = LBound(arrSplit) To UBound(arrSplit)
+                strServer = strServer & ",""" & arrSplit(i) & """"
+            Next i
+            ' Call function to create sheet and graph for consolidated servers
+            Call CreateSheetAndGraph(Mid(strServer, 2), key, DynatraceFromDuration, DynatraceToDuration, DTChartResolution, runID)
+        ElseIf consolidateServerFlag = "NO" Then
+            For i = LBound(arrSplit) To UBound(arrSplit)
+                strServer = """" & arrSplit(i) & """"
+                ' Call function to create sheet and graph for individual servers
+                Call CreateSheetAndGraph(strServer, arrSplit(i), DynatraceFromDuration, DynatraceToDuration, DTChartResolution, runID)
+            Next i
+        End If
+    Next key
+End Function
+
+' Subroutine to create sheet and graph
+Sub CreateSheetAndGraph(strServer As String, k As String, DynatraceFromDuration As String, DynatraceToDuration As String, DTChartResolution As String, runID As String)
+    Dim ServerList As String
+    ' Encode server list for URL usage (if required)
+    ServerList = Application.WorksheetFunction.EncodeURL(strServer)
+    
+    ' Example code to fetch Dynatrace data and create graphs (mock implementation)
+    ' Assuming functions like GetDynatraceData and CreateGraphCustom exist and are correctly implemented
+    
+    ' Example: Fetch CPU utilization data
+    Call GetDynatraceData("builtins:host.cpu.usage", ServerList, DynatraceFromDuration, DynatraceToDuration, DTChartResolution, "DT_CPU_" & k)
+    Call CreateGraphCustom(runID & "_DT_CPU_" & k, "CPU Utilization - " & k, "Elapsed Time", "CPU Utilization")
+    
+    ' Example: Fetch Memory utilization data
+    Call GetDynatraceData("builtins:host.mem.usage", ServerList, DynatraceFromDuration, DynatraceToDuration, DTChartResolution, "DT_Memory_" & k)
+    Call CreateGraphCustom(runID & "_DT_Memory_" & k, "Memory Utilization - " & k, "Elapsed Time", "Memory Utilization")
+    
+    ' Additional graph creation for other metrics as needed
+End Sub
+
+' Example function to fetch data from Dynatrace API (mock implementation)
+Function GetDynatraceData(metric As String, serverList As String, fromDate As String, toDate As String, resolution As String, chartID As String)
+    ' Implementation details would depend on your actual API and data retrieval mechanism
+    ' Placeholder for API call or data retrieval logic
+    ' This function should handle making API requests and processing responses
+    ' Example:
+    ' MsgBox "Fetching data for " & metric & " from " & fromDate & " to " & toDate & " for servers: " & serverList
+    ' Actual implementation would involve HTTP requests and data parsing
+End Function
+
+' Example function to create custom graphs (mock implementation)
+Sub CreateGraphCustom(chartID As String, chartTitle As String, xAxisLabel As String, yAxisLabel As String)
+    ' Implementation details would depend on your charting library or Excel chart creation logic
+    ' Placeholder for chart creation logic using Excel VBA
+    ' Example:
+    ' MsgBox "Creating chart " & chartID & " with title: " & chartTitle
+    ' Actual implementation would involve manipulating Excel objects to create charts
+End Sub
+
+Option Explicit
+
+' Function to extract a substring between two specified delimiters
+Function ExtractString(text As String, start_text As String, end_text As String) As String
+    Dim startPos As Long, endPos As Long
+
+    startPos = InStr(text, start_text) + Len(start_text)
+    endPos = InStr(startPos, text, end_text)
+
+    If startPos > Len(start_text) And endPos > startPos Then
+        ExtractString = Mid(text, startPos, endPos - startPos)
+    Else
+        ExtractString = "NONE"
+    End If
+End Function
+
+' Function to get the Dynatrace server name based on the Entity ID
+Function GetDynatraceServerName(pServerNames As String) As String
+    Dim requestString As String
+    Dim http As Object
+    Dim responseArray() As String
+    Dim i As Long
+
+    requestString = "https://ust.dynatrace.bbtnet.com/e/becda547-ac55-48fe-846f-ed8164cd9223/api/v2/entities?pageSize=12000&entitySelector=type(HOST),entityName.in(" & pServerNames & ")"
+
+    Set http = CreateObject("MSXML2.ServerXMLHTTP")
+    With http
+        .Open "GET", requestString, False
+        .setRequestHeader "Authorization", "Api-Token dt0c01.3GIXZTBMBMXG331S7U7R75SY.LR7UELRMLQUSMACS EMH6PJN46PBY62TY7IIGUI27RKMFSHBJEFTCLOQEQRBZS33"
+        .setRequestHeader "Accept", "application/json; charset=utf-8"
+        .send
+        If .Status = 200 Then
+            responseArray = Split(Split(http.responseText, "[{")(1), "}]")
+            For i = 0 To UBound(responseArray)
+                If InStr(responseArray(i), "entityId") Then
+                    GetDynatraceServerName = Replace(Split(Split(responseArray(i), ":")(1), ",")(0), """", "")
+                    Exit Function
+                End If
+            Next i
+        End If
+    End With
+
+    GetDynatraceServerName = pServerNames ' Return original if no valid response
+End Function
+
+' Subroutine to test GetDynatraceServerName function
+Sub TestGetDynatraceServerName()
+    Dim serverName As String
+    serverName = GetDynatraceServerName(Sheets("ServerConfigurationSheet").Cells(25, 3).Value)
+    MsgBox "Dynatrace Server Name: " & serverName
+End Sub
+
+' Subroutine to reorganize data points in a 2D array for charting
+Sub ReOrganizeDataPoints2D(dumpSheetName As String, finalSheetName As String)
+    Dim s1 As Worksheet, s2 As Worksheet
+    Dim lastRow As Long, i As Long
+    Dim v1 As Date, v2 As String, v3 As Long
+    Dim headers As Range, dataRange As Range, destRange As Range
+
+    Set s1 = ThisWorkbook.Worksheets(dumpSheetName)
+    Set s2 = ThisWorkbook.Worksheets(finalSheetName)
+
+    s2.Cells.Clear ' Clear existing data in final sheet
+
+    ' Find last row in source sheet
+    lastRow = s1.Cells(s1.Rows.Count, "A").End(xlUp).Row
+
+    ' Copy and transpose data
+    Set dataRange = s1.Range("B2:C" & lastRow)
+    dataRange.Copy
+    s2.Range("B2").PasteSpecial Paste:=xlPasteValues, Transpose:=True
+    Application.CutCopyMode = False
+
+    ' Remove duplicates in columns B and C in final sheet
+    Set headers = s2.Range("B1:C1")
+    headers.RemoveDuplicates Columns:=Array(1, 2), Header:=xlYes
+
+    ' Format final sheet
+    s2.Columns("A:A").NumberFormat = "mm/dd/yyyy hh:mm AM/PM"
+    s2.Cells.EntireColumn.AutoFit
+    s2.Range("A1") = "Duration"
+
+    ' Iterate through data and populate final sheet
+    For i = 2 To lastRow
+        v1 = s1.Cells(i, 2).Value
+        v2 = s1.Cells(i, 3).Value
+        v3 = s1.Cells(i, 4).Value
+        Set destRange = s2.Cells(Application.Match(v1, s2.Columns("A"), 0), Application.Match(v2, headers, 0))
+        destRange.Value = v3
+    Next i
+End Sub
+
+' Subroutine to consolidate transaction names across multiple worksheets
+Sub ConsolidateTransactionNames()
+    Dim resultSummary As Worksheet
+    Dim srcSheet As Worksheet
+    Dim dict As Object
+    Dim cell As Range
+    Dim transactionName As Variant
+    Dim key As Variant
+    Dim i As Long, j As Long
+    Dim runID As String
+    Dim lastRow As Long
+
+    Set resultSummary = ThisWorkbook.Worksheets("ResultSummary")
+    resultSummary.Cells.Clear
+
+    Set dict = CreateObject("Scripting.Dictionary")
+
+    ' Loop through all worksheets except ResultSummary
+    For Each srcSheet In ThisWorkbook.Worksheets
+        If srcSheet.Name <> "ResultSummary" And srcSheet.Name Like "ResultSummary_*" Then
+            ' Collect unique transaction names
+            lastRow = srcSheet.Cells(srcSheet.Rows.Count, "A").End(xlUp).Row
+            For Each cell In srcSheet.Range("A8:A" & lastRow)
+                dict(cell.Value) = 1 ' Use dictionary to store unique transaction names
+            Next cell
+        End If
+    Next srcSheet
+
+    ' Write headers in ResultSummary sheet
+    resultSummary.Cells(1, 1).Value = "Transaction Names"
+    j = 3
+    For i = 1 To dict.Count
+        runID = Split(ThisWorkbook.Worksheets("ResultSummary_" & i).Name, "_")(1)
+        resultSummary.Cells(1, j).Value = "RunID = " & runID & vbNewLine & "90th Percentile RT"
+        resultSummary.Cells(1, j + dict.Count + 1).Value = "RunID = " & runID & vbNewLine & "Passed Trx Count"
+        j = j + 1
+    Next i
+    resultSummary.Cells(1, dict.Count + 3).Value = "Trx Count SLA"
+
+    ' Populate ResultSummary with data
+    i = 2
+    For Each key In dict.Keys
+        resultSummary.Cells(i, 1).Value = key
+        For j = 3 To dict.Count + 1
+            If j = 3 Then
+                resultSummary.Cells(i, 2).Value = CustomVLookup(key, ThisWorkbook.Worksheets("SLA").Range("A1:H65536"), 2)
+            End If
+            resultSummary.Cells(i, j + dict.Count).Value = CustomVLookup(key, ThisWorkbook.Worksheets("SLA").Range("A1:H65536"), 3)
+        Next j
+        i = i + 1
+    Next key
+End Sub
+
+' Function to perform custom VLOOKUP with error handling
+Function CustomVLookup(lookupValue As Variant, lookupRange As Range, columnOffset As Integer) As Variant
+    On Error Resume Next
+    CustomVLookup = Application.WorksheetFunction.VLookup(lookupValue, lookupRange, columnOffset, False)
+    On Error GoTo 0
+End Function
+
+' Function to extract a substring between two specified delimiters
+Function ExtractString(text As String, start_text As String, end_text As String) As String
+    ' Declare variables for start and end positions
+    Dim startPos As Integer, endPos As Integer
+
+    ' Find the starting position of the start_text
+    startPos = InStr(text, start_text) + Len(start_text)
+
+    ' Find the ending position of the end_text starting from startPos
+    endPos = InStr(startPos, text, end_text)
+
+    ' Check if valid positions are found
+    If startPos > Len(start_text) And endPos > startPos Then
+        ' Extract the substring
+        ExtractString = Mid(text, startPos, endPos - startPos)
+    Else
+        ' Return "NONE" if positions are invalid
+        ExtractString = "NONE"
+    End If
+End Function
+
+' Function to get the Dynatrace server name based on the Entity ID
+Function GetDynatraceServerName(pServerNames As Range) As String
+    ' Initialize variables
+    Dim requestString As String, responseArray() As String
+    Dim http As Object
+
+    ' Create the request URL for Dynatrace API
+    requestString = "https://ust.dynatrace.bbtnet.com/e/becda547-ac55-48fe-846f-ed8164cd9223/api/v2/entities?pageSize=12000&entitySelector=type(HOST),entityName.in(" & pServerNames & ")"
+
+    ' Create HTTP object
+    Set http = CreateObject("MSXML2.ServerXMLHTTP")
+
+    ' Configure and send the HTTP GET request
+    With http
+        .Open "GET", requestString, False
+        .setRequestHeader "Authorization", "Api-Token dt0c01.3GIXZTBMBMXG331S7U7R75SY.LR7UELRMLQUSMACS EMH6PJN46PBY62TY7IIGUI27RKMFSHBJEFTCLOQEQRBZS33"
+        .setRequestHeader "Accept", "application/json; charset=utf-8"
+        .send
+    End With
+
+    ' Parse the response
+    responseArray = Split(Split(http.responseText, "[{")(1), "}]")
+
+    ' Iterate through the response and extract the server name
+    Dim i As Integer
+    For i = 0 To UBound(responseArray)
+        If InStr(responseArray(i), "entityId") Then
+            GetDynatraceServerName = Replace(Split(Split(responseArray(i), ":")(1), ",")(0), """", "")
+            Exit Function
+        End If
+    Next i
+
+    ' Return the original server name if not found
+    GetDynatraceServerName = pServerNames
+End Function
+
+' Function to reorganize data points in a 2D array for charting
+Function ReOrganizeDataPoints2D(dumpSheetName As String, finalSheetName As String)
+    ' Declare variables for sheets and data
+    Dim s1 As Worksheet, s2 As Worksheet
+    Dim N As Long, i As Long
+    Dim iRow As Long, iCol As Long
+    Dim v1 As Date, v2 As String, v3 As Long
+
+    ' Set source and final sheets
+    Set s1 = Sheets(dumpSheetName)
+    Set s2 = Sheets(finalSheetName)
+
+    ' Clear the final sheet
+    s2.Cells.Clear
+
+    ' Find the last row in the source sheet
+    N = s1.Cells(Rows.Count, "A").End(xlUp).Row
+
+    ' Copy and transpose data
+    s1.Range("B2:C" & N).Copy s2.Range("B2")
+    s2.Range("A:A").RemoveDuplicates Columns:=1, Header:=xlNo
+    s2.Range("B:B").RemoveDuplicates Columns:=1, Header:=xlNo
+    s2.Range("B2:B" & N).Copy
+    s2.Range("B1").PasteSpecial Transpose:=True
+    s2.Range("B2:B" & N).Clear
+
+    ' Format the final sheet
+    s2.Cells.EntireColumn.AutoFit
+    s2.Range("A1") = "Duration"
+    s2.Columns("A:A").NumberFormat = "[$-en-US] mm/dd/yyyy hh:mm AM/PM: @"
+
+    ' Iterate through the data and transpose it
+    For i = 2 To N - 1
+        v1 = s1.Cells(i, 2).Value
+        v2 = s1.Cells(i, 3).Value
+        v3 = s1.Cells(i, 4).Value
+        iRow = s2.Range("A:A").Find(What:=v1, After:=s2.Range("A1")).Row
+        iCol = s2.Range("1:1").Find(What:=v2, After:=s2.Range("A1")).Column
+        s2.Cells(iRow, iCol) = v3
+    Next i
+End Function
+
+' Subroutine to test GetDynatraceServerName function
+Sub aa()
+    MsgBox GetDynatraceServerName(Sheets("ServerConfigurationSheet").Cells(25, 3))
+End Sub
+
+' Function to check if a date is in Daylight Saving Time (DST)
+Public Function IsDST(ByVal d As Date) As Boolean
+    IsDST = d > NextSun("Mar 8 " & Year(d)) And d < NextSun("Nov 1 " & Year(d))
+End Function
+
+' Function to find the next Sunday after a given date
+Private Function NextSun(d As Date) As Date
+    NextSun = d + 7 - Weekday(d)
+End Function
+
+' Subroutine to consolidate transaction names across multiple worksheets
+Sub ConsolidateTransactionNames()
+    Dim myArray As Variant, wkstSrc As Worksheet, wkstDst As Worksheet
+    Dim dict As Object, DotNetArray As Object
+    Dim i As Integer, j As Integer, ictr As Integer, cntResults As Integer
+    Dim varkey As Variant
+
+    ' Clean up the ResultSummary sheet
+    CleanUp "ResultSummary"
+
+    ' Initialize variables
+    ictr = 1
+    jCol = 2
+    Set wkstDst = ThisWorkbook.Worksheets("ResultSummary")
+    Set dict = CreateObject("scripting.dictionary")
+    Set DotNetArray = CreateObject("System.Collections.ArrayList")
+
+    ' Add worksheets to the ArrayList
+    For Each wkstSrc In ThisWorkbook.Worksheets
+        If wkstSrc.Name <> "ResultSummary" And wkstSrc.Name Like "ResultSummary_*" Then
+            DotNetArray.Add wkstSrc.Name
+        End If
+    Next
+
+    ' Populate the dictionary with transaction names
+    For Each wkstSrc In DotNetArray
+        With Worksheets(wkstSrc)
+            For Each cell In .Range("A8", .Cells(Rows.Count, 1).End(xlUp))
+                dict.Item(cell.Value2) = 1
+            Next
+        End With
+    Next
+
+    ' Write transaction names to ResultSummary
+    cntResults = DotNetArray.Count
+    wkstDst.Cells(1, 1) = "Transaction Names"
+    For i = 0 To cntResults - 1
+        wkstDst.Cells(1, 3 + i).FormulaR1C1 = "RunID = " & Split(DotNetArray(i), "_")(1) & Chr(10) & "90th Percentile RT"
+        wkstDst.Cells(1, cntResults + i + 4).FormulaR1C1 = "RunID = " & Split(DotNetArray(i), "_")(1) & Chr(10) & "Passed Trx Count"
+    Next
+    wkstDst.Cells(1, cntResults + 3) = "Trx Count SLA"
+
+    ' Populate the ResultSummary with data
+    For Each varkey In dict.Keys
+        ictr = ictr + 1
+        wkstDst.Cells(ictr, 1) = varkey
+        For j = 3 To iCountResponseTimeCol
+            If j = 3 Then
+                wkstDst.Cells(ictr, 2) = CustomVLookup(varkey, Sheets("SLA").Range("A1:H65536"), 2)
+            End If
+            wkstDst.Cells(ictr, j + cntResults) = CustomVLookup(varkey, Sheets("SLA").Range("A1:H65536"), 3)
+        Next j
+    Next
+
+    ' Clean up
+    On Error Resume Next
+    wkstDst.Cells(ictr, j) = Application.WorksheetFunction.VLookup(varkey, Sheets(DotNetArray(3)).Range("A1:H65536"), 5, False)
+    wkstDst.Cells(ictr, j + 1 + cntResults) = Application.WorksheetFunction.VLookup(varkey, Sheets(DotNetArray(j - 3)).Range("A1:H65536"), 6, False)
+End Sub
+
+' Subroutine to clean formatting in the ResultSummary sheet
+Sub CleanFormatingResultSummary()
+    Sheets("ResultSummary").Select
+    Cells.Select
+    Selection.ClearContents
+    Selection.Delete Shift:=xlUp
+    With Selection.Borders
+        .LineStyle = xlNone
+    End With
+    With Selection.Interior
+        .Pattern
+
+Function getDynatraceDisplayServerName(value As String) As String
+    ' Purpose: Lookup the server name for Dynatrace Display Name
+    On Error GoTo ErrHandler
+    getDynatraceDisplayServerName = Application.VLookup(value, Sheets("ServerConfigurationSheet").Range("B:C"), 2, False)
+    Exit Function
+ErrHandler:
+    getDynatraceDisplayServerName = "Not Found"
+End Function
+
+Sub FormatMainReport(sheetName As String)
+    ' Purpose: Format the main report in the Excel sheet
+    If sheetName <> "ResultSummary" Then
+        Sheets(sheetName).Rows("7:7").Font.Bold = True
+    End If
+    With Sheets(sheetName).Range("A7").CurrentRegion
+        .Borders(xlDiagonalDown).LineStyle = xlNone
+        .Borders(xlDiagonalUp).LineStyle = xlNone
+        .Borders(xlEdgeLeft).LineStyle = xlContinuous
+        .Borders(xlEdgeTop).LineStyle = xlContinuous
+        .Borders(xlEdgeBottom).LineStyle = xlContinuous
+        .Borders(xlEdgeRight).LineStyle = xlContinuous
+        .Borders(xlInsideVertical).LineStyle = xlContinuous
+        .Borders(xlInsideHorizontal).LineStyle = xlContinuous
+    End With
+    Sheets(sheetName).Cells(1, 1).Select
+End Sub
+
+Sub CopyExcelObjects(ppt As PowerPoint.Presentation, wb As Excel.Workbook, sheetName As String, chartName As String, slideNumber As Integer, shapeNumber As Integer, leftPos As Single, topPos As Single, width As Single, height As Single)
+    ' Purpose: Copy chart from Excel to PowerPoint
+    Dim ws As Excel.Worksheet
+    Dim chartObj As Excel.ChartObject
+
+    Set ws = wb.Sheets(sheetName)
+    Set chartObj = ws.ChartObjects(chartName)
+    
+    chartObj.Copy
+    ppt.Slides(slideNumber).Shapes.PasteSpecial(DataType:=ppPasteEnhancedMetafile).Select
+    With pptApp.ActiveWindow.Selection.ShapeRange
+        .Left = leftPos
+        .Top = topPos
+        .Width = width
+        .Height = height
+    End With
+End Sub
+
+Function OpenExistingPPTInstance(pptFilePath As String, templatePPT As String, runID As String) As Boolean
+    ' Purpose: Open an existing PowerPoint instance, update content with data from Excel, and save the presentation.
+    ' Arguments:
+    '   pptFilePath (String): Path to save the PowerPoint file.
+    '   templatePPT (String): Path to the PowerPoint template.
+    '   runID (String): Unique identifier for the run.
+
+    On Error GoTo ErrorHandler ' Set up error handling
+
+    ' Declare variables
+    Dim eApp As Excel.Application
+    Dim wb As Excel.Workbook
+    Dim pptApp As PowerPoint.Application
+    Dim ppt As PowerPoint.Presentation
+    Dim ws As Excel.Worksheet
+    Dim headerText As String
+    Dim slideIndexInit As Integer
+    Dim i As Integer
+    Dim sheetName As String
+    Dim slideIndex As Integer
+    Dim ctr As Integer
+    Dim mySlide As PowerPoint.Slide
+    Dim pptLayout As PowerPoint.CustomLayout
+    Dim tblEx As PowerPoint.Table
+
+    ' Initialize Excel and PowerPoint objects
+    Set eApp = Application
+    Set wb = ActiveWorkbook ' Use the active workbook
+    Set pptApp = CreateObject("PowerPoint.Application")
+    pptApp.Visible = True
+    
+    ' Open the PowerPoint template
+    Set ppt = pptApp.Presentations.Open(templatePPT)
+    slideIndexInit = ppt.Slides.Count
+    
+    ' Update headers in the PowerPoint template
+    headerText = ppt.Slides(1).Shapes("ProjectHeader").TextFrame.TextRange.Text
+    ppt.Slides(1).Shapes("ProjectHeader").TextFrame.TextRange.Text = Replace(headerText, "ProjectName", "Report_Project_Name")
+    ppt.Slides(1).Shapes("ProjectIDHeader").TextFrame.TextRange.Text = "Report_Project_Workstream: Report_Project_ASM ProjectID: Report_Project_ID"
+    ppt.Slides(1).Shapes("ReleaseHeader").TextFrame.TextRange.Text = "Release Name: Report_Release_ID"
+    ppt.Slides(1).Shapes("DateHeader").TextFrame.TextRange.Text = "Date: Report_Project_Date"
+
+    ' Add charts from Excel to PowerPoint
+    Call CopyExcelObjects(ppt, wb, "Hits Per Sec", "Chart 1", 3, 2, 62, 5.04, 180, 350)
+    Call CopyExcelObjects(ppt, wb, "Thruput", "Chart 1", 3, 3, 62, 360, 180, 350)
+    Call CopyExcelObjects(ppt, wb, "TPS", "Chart 1", 3, 4, 245, 5.04, 180, 350)
+    Call CopyExcelObjects(ppt, wb, "Avg Resp_Time", "Chart 1", 3, 5, 245, 360, 180, 350)
+
+    ' Iterate over each sheet in Excel and add relevant charts to PowerPoint
+    ctr = 1
+    For i = 1 To wb.Sheets.Count
+        sheetName = wb.Sheets(i).Name
+        If sheetName Like "DT_CPU*" Then
+            slideIndex = slideIndexInit + ctr
+            Set pptLayout = ppt.Slides(3).CustomLayout
+            Set mySlide = ppt.Slides.Add(slideIndex, ppLayoutBlank)
+            Call CopyExcelObjects(ppt, wb, CStr(sheetName), "Chart 1", CInt(slideIndex), 1, 66, 9.36, 273.6, 700)
+            ctr = ctr + 1
+        End If
+    Next i
+
+    ' Update the observations and objectives in the PowerPoint
+    Dim strObjective As String
+    strObjective = "Perform a Load Test with steady state on business-critical transactions of selectedApplicationName application in Pre-Prod environment, validating the overall performance of the application to support Release ID: Report_Release_ID"
+    Set tblEx = ppt.Slides(2).Shapes("ExecutionTable").Table
+    tblEx.Cell(2, 1).Shape.TextFrame.TextRange.Text = "Load Test"
+    tblEx.Cell(2, 2).Shape.TextFrame.TextRange.Text = "Report_Project_Date"
+    tblEx.Cell(2, 3).Shape.TextFrame.TextRange.Text = "5 minutes"
+    ppt.Slides(2).Shapes("Objectives").TextFrame.TextRange.Text = strObjective
+
+    Dim strObservations As String
+    Dim vUserCount As String, vTestDuration As String
+    vUserCount = Trim(Mid(wb.Sheets("ResultSummary" & runID).Cells(5, 1), InStr(1, wb.Sheets("ResultSummary" & runID).Cells(5, 1), "") + 1, 100))
+    vTestDuration = Trim(Mid(wb.Sheets("ResultSummary_" & runID).Cells(4, 1), InStr(1, wb.Sheets("ResultSummary" & runID).Cells(4, 1), "") + 1, 100))
+    strObservations = "PLT analysis is based upon the steady state window of the test." & vbCrLf & _
+                      "Total " & vUserCount & " users were tested in the PLT to achieve the target TPS." & vbCrLf & _
+                      "PLT was executed for a total duration of " & vTestDuration & "." & vbCrLf & _
+                      "Average CPU utilization during the PLT was around vCalcUtilizationCPU% across all servers." & vbCrLf & _
+                      "Average Memory Utilization during PLT was around vCalcUtilizationMemory% across all servers." & vbCrLf & _
+                      "90th percentile response time for all transactions met their respective response time SLAs during both steady state and test period." & vbCrLf & _
+                      "Target volume of transactions were achieved in the PLT."
+    ppt.Slides(2).Shapes("Observations").TextFrame.TextRange.Text = strObservations
+
+    ' Save and close the PowerPoint presentation
+    ppt.SaveAs pptFilePath, ppSaveAsOpenXMLPresentation
+    ppt.Close
+    pptApp.Quit
+
+    ' Clear the clipboard
+    Application.CutCopyMode = False
+
+    ' Set function result to True
+    OpenExistingPPTInstance = True
+
+    Exit Function
+
+ErrorHandler:
+    ' Error handling routine
+    MsgBox "An error occurred: " & Err.Description, vbExclamation, "Error"
+    If Not pptApp Is Nothing Then
+        pptApp.Quit
+    End If
+    OpenExistingPPTInstance = False
+End Function
+
+Option Explicit
+
+' Subroutine to unzip a file to a specified path
+Sub UnzipAFile(zippedFileFullName As Variant, unzipToPath As Variant)
+    ' Declare a variable for Shell Application object
+    Dim ShellApp As Object
+    
+    ' Create Shell Application object
+    Set ShellApp = CreateObject("Shell.Application")
+    
+    ' Ensure the destination folder exists
+    If Dir(unzipToPath, vbDirectory) = vbNullString Then
+        MkDir unzipToPath
+    End If
+    
+    ' Copy the contents from the zip file to the destination folder
+    On Error Resume Next
+    ShellApp.Namespace(unzipToPath).CopyHere ShellApp.Namespace(zippedFileFullName).Items
+    On Error GoTo 0
+    
+    ' Clean up
+    Set ShellApp = Nothing
+End Sub
+
+' Custom VLookup function with error handling
+Function CustomLookup(lookupValue As Variant, tableArray As Range, colIndex As Long) As Variant
+    On Error GoTo ErrorHandler
+    ' Use Application VLookup function
+    CustomLookup = Application.VLookup(lookupValue, tableArray, colIndex, False)
+    Exit Function
+
+ErrorHandler:
+    ' Return empty string on error
+    CustomLookup = ""
+    Err.Clear
+End Function
+
+' Function to check if a file exists
+Function FileExists(ByVal FileToTest As String) As Boolean
+    FileExists = (Dir(FileToTest) <> "")
+End Function
+
+' Subroutine to delete a file if it exists
+Sub DeleteFile(ByVal FileToDelete As String)
+    If FileExists(FileToDelete) Then
+        ' Remove the readonly attribute if set
+        On Error Resume Next
+        SetAttr FileToDelete, vbNormal
+        Kill FileToDelete
+        On Error GoTo 0
+    End If
+End Sub
+
+' Function to find the Nth occurrence of a substring
+Function FindN(sFindWhat As String, sInputString As String, N As Integer) As Integer
+    Dim j As Integer
+    Dim pos As Integer
+    
+    Application.Volatile
+    pos = 0
+    
+    ' Loop to find the Nth occurrence
+    For j = 1 To N
+        pos = InStr(pos + 1, sInputString, sFindWhat)
+        If pos = 0 Then Exit For
+    Next j
+    
+    FindN = pos
+End Function
+
+' Function to create a folder if it does not exist
+Function CreateDirectory(strPath As String)
+    Dim FSO As Object
+    Set FSO = CreateObject("Scripting.FileSystemObject")
+    
+    ' Create folder if it does not exist
+    If Not FSO.FolderExists(strPath) Then
+        FSO.CreateFolder strPath
+    End If
+    
+    Set FSO = Nothing
+End Function
+
+' Function to encode text to Base64
+Function EncodeBase64(text As String) As String
+    ' Declare byte array and XML objects
+    Dim arrData() As Byte
+    Dim objXML As Object
+    Dim objNode As Object
+    
+    ' Convert text to byte array
+    arrData = StrConv(text, vbFromUnicode)
+    
+    ' Create XML document and node objects
+    Set objXML = CreateObject("MSXML2.DOMDocument.6.0")
+    Set objNode = objXML.createElement("b64")
+    
+    ' Set node type and value, then encode
+    objNode.DataType = "bin.base64"
+    objNode.nodeTypedValue = arrData
+    EncodeBase64 = objNode.text
+    
+    ' Clean up
+    Set objNode = Nothing
+    Set objXML = Nothing
+End Function
+
+' Subroutine to clean up a worksheet
+Sub CleanUp(vLocation As String)
+    With Sheets(vLocation)
+        .Cells.Clear
+        .Range("A1").Select
+    End With
+End Sub
+
+' Function to extract Analyzed Result ID from XML data
+Function ExtractAnalyzedResultID(xmlData As String) As String
+    Dim xDoc As Object
+    Dim listNode As Object, fieldNode As Object
+    Dim strMessage As String
+    
+    ' Create XML document object
+    Set xDoc = CreateObject("Msxml2.DOMDocument.3.0")
+    xDoc.LoadXML xmlData
+    
+    ' Iterate through child nodes
+    For Each listNode In xDoc.DocumentElement.ChildNodes
+        For Each fieldNode In listNode.ChildNodes
+            If fieldNode.BaseName = "Type" Or fieldNode.BaseName = "ID" Then
+                strMessage = strMessage & fieldNode.text & ","
+            End If
+        Next fieldNode
+        
+        ' Check for "ANALYZED RESULT" and return ID
+        If InStr(1, strMessage, "ANALYZED RESULT", vbTextCompare) > 0 Then
+            ExtractAnalyzedResultID = Split(strMessage, ",")(0)
+            Exit Function
+        End If
+        
+        strMessage = ""
+    Next listNode
+    
+    ' Clean up
+    Set xDoc = Nothing
+    ExtractAnalyzedResultID = ""
+End Function
+
+' Function to copy Excel chart to PowerPoint
+Function CopyExcelObjects(ppt As Object, wb As Workbook, sheetName As String, chartName As String, dstSlide As Long, shapeNumber As Long, Optional shapeTop As Long, Optional shapeLeft As Long, Optional shapeHeight As Long, Optional shapeWidth As Long)
+    On Error GoTo ErrHandler
+    Dim shape As Object
+    
+    ' Select the specified sheet
+    wb.Sheets(sheetName).Select
+    
+    ' Copy the specified chart
+    wb.Sheets(sheetName).Shapes(chartName).Copy
+    
+    ' Paste chart into the specified slide in PowerPoint
+    Set shape = ppt.Slides(dstSlide).Shapes.PasteSpecial(ppPastePNG)
+    
+    ' Adjust position and size of the shape if provided
+    If Not IsMissing(shapeTop) Then shape.Top = shapeTop
+    If Not IsMissing(shapeLeft) Then shape.Left = shapeLeft
+    If Not IsMissing(shapeHeight) Then shape.Height = shapeHeight
+    If Not IsMissing(shapeWidth) Then shape.Width = shapeWidth
+
+    ' Optionally, customize shape's line color
+    With shape.Line
+        .Weight = 0.25
+        .ForeColor.RGB = RGB(0, 0, 0)
+    End With
+    
+    Exit Function
+
+ErrHandler:
+    MsgBox "Error in CopyExcelObjects: " & Err.Description
+End Function
+
+' Function to add a worksheet with a specified name
+Function AddWorksheet(sheetName As String) As Worksheet
+    ' Add new worksheet after the last sheet
+    Set AddWorksheet = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    ' Name the new worksheet
+    AddWorksheet.Name = sheetName
+End Function
+
+' Function to check if a directory exists
+Public Function DirExists(s_directory As String) As Boolean
+    Dim oFSO As Object
+    Set oFSO = CreateObject("Scripting.FileSystemObject")
+    DirExists = oFSO.FolderExists(s_directory)
+    Set oFSO = Nothing
+End Function
+
+' Function to copy a summary sheet to a new workbook
+Function CopySummarySheetToNewWB(ReportSummaryLocation As String, CompareFlag As String) As Boolean
+    Dim wb As Workbook
+    Dim ws As Worksheet
+    Dim i As Integer
+    
+    ' Create a new workbook
+    Set wb = Workbooks.Add
+    Application.DisplayAlerts = False
+    
+    ' Copy sheets based on the compare flag
+    If CompareFlag = "NO" Then
+        ThisWorkbook.Sheets("ResultSummary").Copy Before:=wb.Sheets(1)
+    ElseIf CompareFlag = "YES" Then
+        For Each ws In ThisWorkbook.Sheets
+            If ws.Name Like "ResultSummary*" Then
+                ws.Copy Before:=wb.Sheets(1)
+            End If
+        Next ws
+    End If
+    
+    ' Delete the default sheet if present
+    On Error Resume Next
+    wb.Sheets("Sheet1").Delete
+    On Error GoTo 0
+    
+    ' Save the new workbook
+    wb.SaveAs fileName:=ReportSummaryLocation, FileFormat:=xlOpenXMLWorkbook, CreateBackup:=False
+    wb.Close SaveChanges:=False
+    
+    ' Clean up
+    Application.DisplayAlerts = True
+    CopySummarySheetToNewWB = True
+End Function
+
+' Subroutine to create a PowerPoint report from a template
+Sub CreatePPTReport()
+    Dim templatePPT As String
+    ' Define the template path
+    templatePPT = "C:\LR\reports\PES_Report_Template.pptx"
+    
+    ' Open existing PowerPoint instance with the template
+    Call OpenExistingPPTInstance("C:\LR\reports\PES_Report_11.pptx", templatePPT)
+End Sub
+
+' Function to add an OLE object to a PowerPoint slide
+Function AddOleObjectToPPT(ppt As Object, slideNum As Long, fileName As String)
+    ' Add OLE object to the slide
+    ppt.Slides(slideNum).Shapes.AddOLEObject _
+        Left:=535, Top:=160, Width:=200, Height:=300, _
+        FileName:=fileName, IconLabel:="Response Time Summary", DisplayAsIcon:=True
+End Function
+
+' Subroutine to execute queries against an MDB database
+Sub ExecuteAccessResults(pDataSource As String, pQuery As String, vLocation As String, pQueryName As String)
+    Dim cn As Object
+    Dim rs As Object
+    Dim i As Integer
+    Dim strSql As String
+    Dim strConnection As String
+    
+    ' Create ADODB Connection object
+    Set cn = CreateObject("ADODB.Connection")
+    
+    ' Clean up the worksheet
+    CleanUp vLocation
+    
+    ' Define connection string
+    strConnection = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & pDataSource
+    
+    ' Define SQL query
+    strSql = pQuery
+    
+    ' Open connection
+    cn.Open strConnection
+    
+    ' Create Recordset object
+    Set rs = CreateObject("ADODB.Recordset")
+    
+    ' Open recordset
+    rs.CursorLocation = 3 ' adUseClient
+    rs.Open strSql, cn
+    
+    ' Populate worksheet with recordset data
+    For i = 0 To rs.Fields.Count - 1
+        Sheets(vLocation).Cells(1, i + 1) = rs.Fields(i).Name
+    Next
+    
+    Sheets(vLocation).Range("A2").CopyFromRecordset rs
+    
+    ' Close and clean up
+    rs.Close
+    Set rs = Nothing
+    cn.Close
+    Set cn = Nothing
+    
+    ' Set the query name in the worksheet
+    Sheets(vLocation).Cells(1, 1) = pQueryName
+End Sub
+
+' Subroutine to unzip a file to a specified path
+Sub UnzipAFile(zippedFileFullName As Variant, unzipToPath As Variant)
+    ' Declare a variable for Shell Application object
+    Dim ShellApp As Object
+    
+    ' Create Shell Application object
+    Set ShellApp = CreateObject("Shell.Application")
+    
+    ' Error handling to resume next step on error
+    On Error Resume Next
+    
+    ' Check if the directory exists and display a message box with its path
+    MsgBox Dir(unzipToPath)
+    
+    ' If directory exists, delete it
+    If Dir(unzipToPath) <> vbNullString Then Kill unzipToPath
+    
+    ' Copy the contents from the zip file to the destination folder
+    ShellApp.Namespace(unzipToPath).CopyHere ShellApp.Namespace(zippedFileFullName).Items, 16
+    
+    ' Reset error handling
+    On Error GoTo 0
+End Sub
+
+' Custom lookup function with error handling
+Function CustomLookup(lookupValue As Variant, tableArray As Range, colIndex As Long) As Variant
+    ' Resume next on error
+    On Error Resume Next
+    
+    ' Attempt to use the Application's VLookup function
+    CustomLookup = Application.WorksheetFunction.VLookup(lookupValue, tableArray, colIndex, False)
+    
+    ' If an error occurs, return an empty string
+    If Err.Number <> 0 Then
+        CustomLookup = ""
+    End If
+    
+    ' Reset error handling
+    On Error GoTo 0
+End Function
+
+' Function to check if a file exists
+Function FileExists(ByVal FileToTest As String) As Boolean
+    ' Return True if the file exists, otherwise False
+    FileExists = (Dir(FileToTest) <> "")
+End Function
+
+' Subroutine to delete a file if it exists
+Sub DeleteFile(ByVal FileToDelete As String)
+    ' Check if the file exists
+    If FileExists(FileToDelete) Then
+        ' Remove the readonly attribute if set
+        SetAttr FileToDelete, vbNormal
+        
+        ' Delete the file
+        Kill FileToDelete
+    End If
+End Sub
+
+' Function to find the Nth occurrence of a substring
+Function FindN(sFindWhat As String, sInputString As String, N As Integer) As Integer
+    Dim j As Integer
+    ' Make function volatile
+    Application.Volatile
+    
+    ' Initialize FindN
+    FindN = 0
+    
+    ' Loop to find the Nth occurrence
+    For j = 1 To N
+        FindN = InStr(FindN + 1, sInputString, sFindWhat)
+        If FindN = 0 Then Exit For
+    Next
+End Function
+
+' Function to create a folder if it does not exist
+Function MkDir(strPath As String)
+    Dim FSO As Object
+    ' Create File System Object
+    Set FSO = CreateObject("Scripting.FileSystemObject")
+    
+    ' If the folder does not exist, create it
+    If Not FSO.FolderExists(strPath) Then
+        FSO.CreateFolder strPath
+    End If
+End Function
+
+' Function to encode text to Base64
+Function EncodeBase64(text As String) As String
+    ' Declare byte array
+    Dim arrData() As Byte
+    
+    ' Convert text to byte array
+    arrData = StrConv(text, vbFromUnicode)
+    
+    ' Create XML document and node objects
+    Dim objXML As Object
+    Dim objNode As Object
+    Set objXML = CreateObject("MSXML2.DOMDocument.6.0")
+    Set objNode = objXML.createElement("b64")
+    
+    ' Set node type and value, then encode
+    objNode.DataType = "bin.base64"
+    objNode.nodeTypedValue = arrData
+    EncodeBase64 = objNode.text
+    
+    ' Clean up
+    Set objNode = Nothing
+    Set objXML = Nothing
+End Function
+
+' Subroutine to clean up a worksheet
+Sub CleanUp(vLocation As String)
+    ' Activate the specified sheet
+    Sheets(vLocation).Activate
+    
+    ' Select all cells
+    Cells.Select
+    
+    ' Delete the content of selected cells and shift up
+    Selection.Delete Shift:=xlUp
+    
+    ' Select cell A1
+    Range("A1").Select
+End Sub
+
+' Function to extract Analyzed Result ID from XML data
+Function ExtractAnalyzedResultID(xmlData As String) As String
+    Dim xDoc As Object
+    Dim listNode As Object, fieldNode As Object
+    Dim strMessage As String
+    
+    ' Create XML document object
+    Set xDoc = CreateObject("Msxml2.DOMDocument.3.0")
+    
+    ' Load XML data
+    xDoc.LoadXML xmlData
+    
+    ' Iterate through child nodes
+    For Each listNode In xDoc.DocumentElement.ChildNodes
+        For Each fieldNode In listNode.ChildNodes
+            If fieldNode.BaseName = "Type" Or fieldNode.BaseName = "ID" Then
+                strMessage = strMessage & fieldNode.text & ","
+            End If
+        Next fieldNode
+        
+        ' Check for "ANALYZED RESULT" and return ID
+        If InStr(1, strMessage, "ANALYZED RESULT", vbTextCompare) > 0 Then
+            ExtractAnalyzedResultID = Split(strMessage, ",")(0)
+            Exit For
+        Else
+            strMessage = ""
+            ExtractAnalyzedResultID = ""
+        End If
+    Next listNode
+    
+    ' Clean up
+    Set xDoc = Nothing
+End Function
+
+' Function to copy Excel chart to PowerPoint
+Function CopyExcelObjects(ppt As Object, wb As Workbook, sheetName As String, chartName As String, dstSlide As Long, shapeNumber As Long, Optional shapeTop As Long, Optional shapeLeft As Long, Optional shapeHeight As Long, Optional shapeWidth As Long)
+    On Error GoTo ErrHandler
+    ' Select the specified sheet
+    Sheets(sheetName).Select
+    
+    ' Copy the specified chart
+    Sheets(sheetName).Shapes(chartName).Copy
+    
+    ' Paste chart into the specified slide in PowerPoint
+    ppt.Slides(dstSlide).Shapes.PasteSpecial ppPastePNG
+    
+    ' Adjust position and size of the shape if provided
+    If Not (IsMissing(shapeTop)) Then
+        With ppt.Slides(dstSlide).Shapes(shapeNumber)
+            .Left = shapeLeft
+            .Top = shapeTop
+            .Height = shapeHeight
+            .Width = shapeWidth
+            .Line.Weight = 0.25
+            .Line.ForeColor.RGB = RGB(0, 0, 0)
+        End With
+    End If
+
+    If Not (IsMissing(shapeHeight)) Then
+        With ppt.Slides(dstSlide).Shapes(shapeNumber)
+            .LockAspectRatio = msoFalse
+            .Height = shapeHeight
+            .Width = shapeWidth
+        End With
+    End If
+    
+ErrHandler:
+    ' Display error description if any
+    MsgBox Err.Description
+End Function
+
+' Function to add a worksheet with a specified name
+Function AddWorksheet(sheetName As String)
+    Dim ws As Worksheet
+    ' Add new worksheet after the last sheet
+    Set ws = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    
+    ' Name the new worksheet
+    ws.Name = sheetName
+End Function
+
+' Function to check if a directory exists
+Public Function DirExists(s_directory As String) As Boolean
+    Dim oFSO As Object
+    ' Create File System Object
+    Set oFSO = CreateObject("Scripting.FileSystemObject")
+    
+    ' Return True if the folder exists, otherwise False
+    DirExists = oFSO.FolderExists(s_directory)
+End Function
+
+' Function to copy a summary sheet to a new workbook
+Function CopySummarySheetToNewWB(ReportSummaryLocation As String, CompareFlag As String) As Boolean
+    Dim wb As Workbook
+    Dim i As Integer
+    
+    ' Create a new workbook
+    Set wb = Workbooks.Add
+    
+    ' Disable alerts and events
+    Application.DisplayAlerts = False
+    Application.EnableEvents = False
+    
+    ' Copy sheets based on the compare flag
+    If CompareFlag = "NO" Then
+        ThisWorkbook.Sheets("ResultSummary").Copy Before:=wb.Sheets(1)
+    ElseIf CompareFlag = "YES" Then
+        For i = 1 To ThisWorkbook.Sheets.Count
+            If ThisWorkbook.Sheets(i).Name Like "ResultSummary*" Then
+                ThisWorkbook.Sheets(i).Copy Before:=wb.Sheets(1)
+            End If
+        Next i
+    End If
+    
+    ' Delete the default sheet if present
+    On Error Resume Next
+    wb.Sheets("Sheet1").Delete
+    On Error GoTo 0
+    
+    ' Save the new workbook
+    wb.SaveAs fileName:=ReportSummaryLocation, FileFormat:=xlOpenXMLWorkbook, CreateBackup:=False
+    
+    ' Close the workbook without saving
+    wb.Close SaveChanges:=False
+    
+    ' Re-enable alerts and events
+    Application.DisplayAlerts = True
+    Application.EnableEvents = True
+End Function
+
+' Subroutine to create a PowerPoint report from a template
+Sub CreatePPTReport()
+    Dim templatePPT As String
+    ' Define the template path
+    templatePPT = "C:\LR\reports\PES_Report_Template.pptx"
+    
+    ' Open existing PowerPoint instance with the template
+    Call OpenExistingPPTInstance("C:\LR\reports\PES_Report_11.pptx", templatePPT)
+End Sub
+
+' Function to add an OLE object to a PowerPoint slide
+Function AddOleObjectToPPT(ppt As Object, slideNum As Long, fileName As String)
+    Dim myDocument As Object
+    ' Set the target slide
+    Set myDocument = ppt.Slides(slideNum)
+    
+    ' Add OLE object to the slide
+    myDocument.Shapes.AddOLEObject Left:=535, Top:=160, Width:=200, Height:=300, _
+                                   fileName:=fileName, IconLabel:="Response Time Summary", DisplayAsIcon:=True
+End Function
+
+' Subroutine to execute queries against an MDB database
+Sub ExecuteAccessResults(pDataSource As String, pQuery As String, vLocation As String, pQueryName As String)
+    Dim cn As Object
+    Dim rs As Object
+    Dim strSql As String
+    Dim strConnection As String
+    
+    ' Create ADODB Connection object
+    Set cn = CreateObject("ADODB.Connection")
+    
+    ' Clean up the worksheet
+    CleanUp vLocation
+    
+    ' Define connection string
+    strConnection = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & pDataSource
+    
+    ' Define SQL query
+    strSql = pQuery
+    
+    ' Open connection
+    cn.Open strConnection
+    
+    ' Create Recordset object
+    Set rs = CreateObject("ADODB.Recordset")
+    
+    ' Open recordset
+    rs.CursorLocation = 3 ' adUseClient
+    rs.Open strSql, cn
+    
+    ' Populate worksheet with recordset data
+    For i = 0 To rs.Fields.Count - 1
+        Sheets(vLocation).Cells(1, i + 1) = rs.Fields(i).Name
+    Next
+    
+    Sheets(vLocation).Range("A2").CopyFromRecordset rs
+    
+    ' Close and clean up
+    rs.Close
+    Set rs = Nothing
+    cn.Close
+    Set cn = Nothing
+    
+    ' Set the query name in the worksheet
+    Sheets(vLocation).Cells(1, 1) = pQueryName
+End Sub
+
+
+Function ReOrganizeDataPointsIn2D(dumpSheetName As String, FinalSheetName As String)
+    ' Transpose the rows and columns for chart purpose
+    Dim s1 As Worksheet, s2 As Worksheet
+    Dim N As Long, i As Long, v1 As Date, v2 As String, v3 As Long
+    Dim iRow As Long, iCol As Long
+    
+    Set s1 = Sheets(dumpSheetName)
+    s1.Select
+    
+    ' INTERCHANGE Columns
+    s1.Columns("C:C").Select
+    Application.CutCopyMode = False
+    Selection.Cut
+    s1.Columns("B:B").Select
+    Selection.Insert Shift:=xlToRight
+    s1.Range("B1").Select
+    
+    Set s2 = Sheets(FinalSheetName)
+    s2.Cells.Clear
+    
+    N = s1.Cells(Rows.Count, "A").End(xlUp).Row
+    s1.Range("B2:C" & N).Copy s2.Range("A2")
+    s2.Range("B:B").RemoveDuplicates Columns:=1, Header:=xlNo
+    s2.Range("B:B").RemoveDuplicates Columns:=1, Header:=xlNo
+    s2.Range("B1").Copy
+    s2.Range("B1").PasteSpecial Transpose:=True
+    s2.Range("B:B").Clear
+    
+    Sheets(FinalSheetName).Select
+    Range("B2").Select
+    Columns("A:A").Select
+    Selection.NumberFormat = "[$-en-US]mm/dd/yyyy hh:mm AM/PM;@"
+    Range("B2").Select
+    Columns("A:A").AutoFit
+    Range("B2").Select
+    ActiveCell.Value = "Duration"
+    
+    s2.Columns("A:A").Select
+    Selection.NumberFormat = "[$-en-US]mm/dd/yyyy hh:mm AM/PM;@"
+    Range("B2").Select
+    
+    For i = 2 To 1
+        v1 = s1.Cells(i, 2).Value
+        v2 = s1.Cells(i, 3).Value
+        v3 = s1.Cells(i, 1).Value
+        
+        iRow = s2.Range("A:A").Find(What:=v1, After:=s2.Range("A1"), _
+            LookIn:=xlFormulas, LookAt:=xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+            MatchCase:=False, SearchFormat:=False).Row
+        iCol = s2.Range("A:A").Find(What:=v2, After:=s2.Range("A1"), _
+            LookIn:=xlFormulas, LookAt:=xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+            MatchCase:=False, SearchFormat:=False).Column
+        
+        s2.Cells(iRow, iCol) = v3
+    Next i
+    
+    s2.Select
+End Function
+
+
+Sub ExecuteAccessResults(pDataSource As String, pQuery As String, vLocation As String, pQueryName As String)
+    ' Procedure to execute the given queries against the MDB database
+    
+    Dim cn As Object
+    Dim rs As ADODB.Recordset
+    Dim strSql As String
+    Dim strConnection As String
+    
+    Set cn = CreateObject("ADODB.Connection")
+    
+    ' Clean up
+    CleanUp (vLocation)
+    
+    ' Interact with Access DB
+    strConnection = "Provider=Microsoft.ACE.OLEDB.12.0;" & _
+        "Data Source=" & pDataSource
+    strSql = pQuery
+    
+    cn.Open strConnection
+    cn.Execute strSql
+    
+    Set rs = CreateObject("ADODB.Recordset")
+    rs.CursorLocation = adUseClient
+    rs.Open strSql, cn
+    
+    MsgBox rs.RecordCount & " rows in MyTable"
+    
+    ' Add header
+    For i = 0 To rs.Fields.Count - 1
+        Sheets(vLocation).Cells(1, i + 1).Value = rs.Fields(i).Name
+    Next
+    
+    ' Copy data
+    Sheets(vLocation).Range("A2").CopyFromRecordset rs
+    
+    rs.Close
+    cn.Close
+    Set rs = Nothing
+    Set cn = Nothing
+    
+    Sheets(vLocation).Cells(1, 1) = pQueryName
+End Sub
+
+Function AddOjectToPPT(ppt As Presentation, slideNum As Long, fileName As String)
+    ' Procedure to add an object to a PowerPoint slide
+    Dim myDocument As Object
+    On Error Resume Next
+    
+    Set myDocument = ppt.Slides(slideNum)
+    
+    myDocument.Shapes.AddOLEObject Left:=535, Top:=160, _
+        Width:=200, Height:=300, _
+        fileName:=fileName, IconLabel:="ResponseTimeSummary", DisplayAsIcon:=True
+    
+    SetAttr fileName, vbNormal
+End Function
+
+
+Function IsDaylightSaving(dateToCheck As Date) As Boolean
+    Dim startDST As Date
+    Dim endDST As Date
+    Dim year As Integer
+    Dim secondSundayMarch As Date
+    Dim firstSundayNovember As Date
+    
+    year = Year(dateToCheck)
+    
+    ' Calculate the second Sunday in March
+    secondSundayMarch = DateSerial(year, 3, 14 - Weekday(DateSerial(year, 3, 1)))
+    
+    ' Calculate the first Sunday in November
+    firstSundayNovember = DateSerial(year, 11, 7 - Weekday(DateSerial(year, 11, 1)))
+    
+    ' Determine DST start and end dates
+    startDST = secondSundayMarch
+    endDST = firstSundayNovember
+    
+    ' Check if the date falls within the DST range
+    If dateToCheck >= startDST And dateToCheck < endDST Then
+        IsDaylightSaving = True
+    Else
+        IsDaylightSaving = False
+    End If
+End Function
+
+Sub TestDST()
+    Dim testDate As Date
+    Dim result As Boolean
+    
+    testDate = #2024-06-21#  ' Example date
+    
+    result = IsDaylightSaving(testDate)
+    
+    If result Then
+        MsgBox "The date " & testDate & " is within Daylight Saving Time."
+    Else
+        MsgBox "The date " & testDate & " is not within Daylight Saving Time."
+    End If
+End Sub
+
+
+Function UnixToEST(unixTimestamp As Double) As Date
+    Dim utcDate As Date
+    Dim estDate As Date
+    
+    ' Convert Unix timestamp to VBA date (Excel date)
+    utcDate = DateAdd("s", unixTimestamp, #1/1/1970#)
+    
+    ' Adjust to EST
+    estDate = utcDate - (5 / 24) ' Subtract 5 hours for standard EST (UTC-5)
+    
+    ' Check if the date is in DST
+    If IsDaylightSaving(estDate) Then
+        estDate = estDate + (1 / 24) ' Add 1 hour for DST
+    End If
+    
+    UnixToEST = estDate
+End Function
+
+Function IsDaylightSaving(dateToCheck As Date) As Boolean
+    Dim startDST As Date
+    Dim endDST As Date
+    Dim year As Integer
+    Dim secondSundayMarch As Date
+    Dim firstSundayNovember As Date
+    
+    year = Year(dateToCheck)
+    
+    ' Calculate the second Sunday in March
+    secondSundayMarch = DateSerial(year, 3, 14 - Weekday(DateSerial(year, 3, 1)))
+    
+    ' Calculate the first Sunday in November
+    firstSundayNovember = DateSerial(year, 11, 7 - Weekday(DateSerial(year, 11, 1)))
+    
+    ' Determine DST start and end dates
+    startDST = secondSundayMarch
+    endDST = firstSundayNovember
+    
+    ' Check if the date falls within the DST range
+    If dateToCheck >= startDST And dateToCheck < endDST Then
+        IsDaylightSaving = True
+    Else
+        IsDaylightSaving = False
+    End If
+End Function
+
+Sub TestUnixToEST()
+    Dim unixTimestamp As Double
+    Dim estDate As Date
+    
+    unixTimestamp = 1711569000 ' Example Unix timestamp
+    
+    estDate = UnixToEST(unixTimestamp)
+    
+    MsgBox "The EST date is: " & estDate
+End Sub
+
+
+' Subroutine to consolidate transaction names across multiple worksheets
+Sub ConsolidateTransactionNames()
+    Dim myArray As Variant, wkstSrc As Worksheet, wkstDst As Worksheet
+    Dim dict As Object, DotNetArray As Object
+    Dim i As Integer, j As Integer, ictr As Integer, cntResults As Integer
+    Dim varkey As Variant
+
+    ' Clean up the ResultSummary sheet
+    CleanUp "ResultSummary"
+
+    ' Initialize variables
+    ictr = 1 ' Row counter for the destination sheet
+    jCol = 2 ' Column offset for processing
+    Set wkstDst = ThisWorkbook.Worksheets("ResultSummary") ' Set destination sheet
+    Set dict = CreateObject("scripting.dictionary") ' Create a dictionary object
+    Set DotNetArray = CreateObject("System.Collections.ArrayList") ' Create an ArrayList object
+
+    ' Add worksheets to the ArrayList, excluding ResultSummary
+    For Each wkstSrc In ThisWorkbook.Worksheets
+        If wkstSrc.Name <> "ResultSummary" And wkstSrc.Name Like "ResultSummary_*" Then
+            DotNetArray.Add wkstSrc.Name
+        End If
+    Next
+
+    ' Populate the dictionary with transaction names from source sheets
+    For Each wkstSrc In DotNetArray
+        With Worksheets(wkstSrc)
+            For Each cell In .Range("A8", .Cells(Rows.Count, 1).End(xlUp))
+                dict.Item(cell.Value2) = 1 ' Use transaction name as key in the dictionary
+            Next
+        End With
+    Next
+
+    ' Write transaction names to ResultSummary
+    cntResults = DotNetArray.Count ' Get count of source sheets
+    wkstDst.Cells(1, 1) = "Transaction Names"
+    ' Write headers for each RunID
+    For i = 0 To cntResults - 1
+        wkstDst.Cells(1, 3 + i).FormulaR1C1 = "RunID = " & Split(DotNetArray(i), "_")(1) & Chr(10) & "90th Percentile RT"
+        wkstDst.Cells(1, cntResults + i + 4).FormulaR1C1 = "RunID = " & Split(DotNetArray(i), "_")(1) & Chr(10) & "Passed Trx Count"
+    Next
+    wkstDst.Cells(1, cntResults + 3) = "Trx Count SLA"
+
+    ' Populate the ResultSummary with transaction data
+    For Each varkey In dict.Keys
+        ictr = ictr + 1
+        wkstDst.Cells(ictr, 1) = varkey ' Write transaction name
+        ' Write SLA values and 90th percentile response times
+        For j = 3 To cntResults + 2
+            If j = 3 Then
+                wkstDst.Cells(ictr, 2) = CustomVLookup(varkey, Sheets("SLA").Range("A1:H65536"), 2) ' Write SLA
+            End If
+            wkstDst.Cells(ictr, j + cntResults) = CustomVLookup(varkey, Sheets("SLA").Range("A1:H65536"), 3) ' Write Passed Trx Count
+        Next j
+    Next
+
+    ' Clean up residual values and set default cell values
+    On Error Resume Next
+    wkstDst.Cells(ictr, j) = Application.WorksheetFunction.VLookup(varkey, Sheets(DotNetArray(3)).Range("A1:H65536"), 5, False)
+    wkstDst.Cells(ictr, j + 1 + cntResults) = Application.WorksheetFunction.VLookup(varkey, Sheets(DotNetArray(j - 3)).Range("A1:H65536"), 6, False)
+End Sub
+
+' Subroutine to clean formatting in the ResultSummary sheet
+Sub CleanFormatingResultSummary()
+    Sheets("ResultSummary").Select
+    Cells.Select
+    Selection.ClearContents ' Clear all cell contents
+    Selection.Delete Shift:=xlUp ' Delete and shift cells up
+    With Selection.Borders
+        .LineStyle = xlNone ' Remove all borders
+    End With
+    With Selection.Interior
+        .Pattern = xlNone ' Remove all interior patterns
+        .TintAndShade = 0
+        .PatternTintAndShade = 0
+    End With
+    ActiveWindow.SmallScroll Down:=-33 ' Scroll to top
+    ActiveSheet.Rows("1:1").Select
+    Selection.Font.Bold = True ' Set first row to bold
+    Range("A1").Select
+End Sub
+
+' Subroutine to clean up the ResultSummary sheet
+Sub CleanUp(sheetName As String)
+    On Error Resume Next
+    Worksheets(sheetName).Delete ' Delete the worksheet if it exists
+    On Error GoTo 0
+    ' Add a new worksheet with the given name
+    ThisWorkbook.Worksheets.Add(After:=Worksheets(Worksheets.Count)).Name = sheetName
+End Sub
+
+' Custom VLookup function to handle errors
+Function CustomVLookup(lookupValue As Variant, lookupRange As Range, columnOffset As Integer) As Variant
+    Dim result As Variant
+    On Error Resume Next
+    result = Application.WorksheetFunction.VLookup(lookupValue, lookupRange, columnOffset, False)
+    On Error GoTo 0
+    CustomVLookup = result
+End Function
+
+
+' Function to create a custom chart in a specified worksheet
+Function CreateGraphCustom(sheetName As String, chartName As String, xAxisName As String, yAxisName As String)
+    Dim ws As Worksheet
+    Dim chartObj As ChartObject
+    Dim chart As Chart
+    Dim dataRange As Range
+    Dim minScale As Double
+    Dim maxScale As Double
+    Dim lRow As Long
+    Dim lCol As Long
+    
+    On Error GoTo ErrorHandler
+    
+    ' Set the worksheet
+    Set ws = Sheets(sheetName)
+    ws.Select
+
+    ' Determine the last row and column with data
+    lRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    lCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+    
+    ' Define the range of data to be plotted
+    Set dataRange = ws.Range(ws.Cells(1, 1), ws.Cells(lRow, lCol))
+    
+    ' Add and customize the chart
+    Set chartObj = ws.ChartObjects.Add(Left:=100, Width:=375, Top:=50, Height:=225)
+    Set chart = chartObj.Chart
+    chart.SetSourceData Source:=dataRange
+    chart.ChartType = xlXYScatterSmoothNoMarkers
+    
+    ' Set chart titles and axis labels
+    With chart
+        .HasTitle = True
+        .ChartTitle.Text = chartName
+        .Axes(xlCategory, xlPrimary).HasTitle = True
+        .Axes(xlCategory, xlPrimary).AxisTitle.Text = xAxisName
+        .Axes(xlValue, xlPrimary).HasTitle = True
+        .Axes(xlValue, xlPrimary).AxisTitle.Text = yAxisName
+    End With
+    
+    ' Set the value axis scales if specific conditions are met
+    If sheetName Like "DT_CPU*" Or sheetName Like "DT_Memory*" Then
+        With chart.Axes(xlValue)
+            .MaximumScale = 100
+            .MinimumScale = 0
+        End With
+    End If
+    
+    Exit Function
+
+ErrorHandler:
+    MsgBox "An error occurred: " & Err.Description, vbCritical
+    Exit Function
+End Function
+
+
+'UPDATED Function
+' Function to create a custom chart in a specified worksheet
+Function CreateGraphCustom(sheetName As String, chartName As String, xAxisName As String, yAxisName As String, startTime As Date, intervalMinutes As Integer)
+    Dim ws As Worksheet
+    Dim chartObj As ChartObject
+    Dim chart As Chart
+    Dim dataRange As Range
+    Dim lRow As Long
+    Dim lCol As Long
+    
+    On Error GoTo ErrorHandler
+    
+    ' Set the worksheet
+    Set ws = Sheets(sheetName)
+    ws.Select
+
+    ' Determine the last row and column with data
+    lRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    lCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+    
+    ' Define the range of data to be plotted
+    Set dataRange = ws.Range(ws.Cells(1, 1), ws.Cells(lRow, lCol))
+    
+    ' Add and customize the chart
+    Set chartObj = ws.ChartObjects.Add(Left:=100, Width:=375, Top:=50, Height:=225)
+    Set chart = chartObj.Chart
+    chart.SetSourceData Source:=dataRange
+    chart.ChartType = xlXYScatterSmoothNoMarkers
+    
+    ' Set chart titles and axis labels
+    With chart
+        .HasTitle = True
+        .ChartTitle.Text = chartName
+        .Axes(xlCategory, xlPrimary).HasTitle = True
+        .Axes(xlCategory, xlPrimary).AxisTitle.Text = xAxisName
+        .Axes(xlValue, xlPrimary).HasTitle = True
+        .Axes(xlValue, xlPrimary).AxisTitle.Text = yAxisName
+    End With
+    
+    ' Set the value axis scales if specific conditions are met
+    If sheetName Like "DT_CPU*" Or sheetName Like "DT_Memory*" Then
+        With chart.Axes(xlValue)
+            .MaximumScale = 100
+            .MinimumScale = 0
+        End With
+    End If
+    
+    ' Set the minimum and maximum scale for the X-axis
+    With chart.Axes(xlCategory)
+        .MinimumScale = CDbl(startTime)
+        .MaximumScale = CDbl(startTime + (intervalMinutes / 1440) * (lRow - 1))
+        .MajorUnit = intervalMinutes / 1440 ' Convert interval to days
+        .TickLabels.NumberFormat = "m/d/yyyy h:mm AM/PM"
+    End With
+    
+    Exit Function
+
+ErrorHandler:
+    MsgBox "An error occurred: " & Err.Description, vbCritical
+    Exit Function
+End Function
+
+'UPDATED ENDS
