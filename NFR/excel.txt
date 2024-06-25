@@ -1,0 +1,315 @@
+
+Sub RunPythonQueriesWithSheetNames()
+    Dim pyScriptPath As String
+    Dim queriesWithSheets As String
+    Dim shellCmd As String
+    
+    ' Define the path to the Python script
+    pyScriptPath = "C:\path\to\your\python_script.py"
+    
+    ' Read queries and sheet names from Excel and concatenate them separated by a special delimiter
+    queriesWithSheets = _
+        Range("A1").Value & ";;;Query1" & ";;; " & _
+        Range("A2").Value & ";;;Query2" & ";;; " & _
+        Range("A3").Value & ";;;Query3" & ";;; " & _
+        Range("A4").Value & ";;;Query4"
+    
+    ' Construct the command line with queries and sheet names as a single argument
+    shellCmd = "python """ & pyScriptPath & """ """ & queriesWithSheets & """"
+    
+    ' Run the Python script
+    Shell shellCmd, vbNormalFocus
+End Sub
+
+import sys
+import pyodbc
+from openpyxl import load_workbook, Workbook
+
+def run_queries_with_sheets(queries_with_sheets, cursor):
+    results = []
+    query_sheet_pairs = queries_with_sheets.split(";;; ")
+    
+    for pair in query_sheet_pairs:
+        query, sheet_name = pair.split(";;;")
+        cursor.execute(query)
+        columns = [column[0] for column in cursor.description]
+        rows = cursor.fetchall()
+        results.append((sheet_name, columns, rows))
+    
+    return results
+
+def write_to_excel(workbook, results):
+    for result in results:
+        sheet_name, columns, rows = result
+        if sheet_name in workbook.sheetnames:
+            sheet = workbook[sheet_name]
+        else:
+            sheet = workbook.create_sheet(sheet_name)
+        
+        for col_num, col_name in enumerate(columns, start=1):
+            sheet.cell(row=1, column=col_num, value=col_name)
+        for row_num, row_data in enumerate(rows, start=2):
+            for col_num, cell_value in enumerate(row_data, start=1):
+                sheet.cell(row=row_num, column=col_num, value=cell_value)
+
+def main():
+    queries_with_sheets = sys.argv[1]
+    excel_path = "C:\\path\\to\\your\\results.xlsx"  # Output Excel file
+
+    # Database connection details (adjust these to your Access database)
+    connection_string = r"Driver={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=C:\path\to\your\database.accdb;"
+    conn = pyodbc.connect(connection_string)
+    cursor = conn.cursor()
+    
+    try:
+        wb = load_workbook(excel_path)
+    except FileNotFoundError:
+        wb = Workbook()
+        wb.remove(wb.active)  # Remove default sheet if creating new workbook
+
+    results = run_queries_with_sheets(queries_with_sheets, cursor)
+    write_to_excel(wb, results)
+    
+    wb.save(excel_path)
+    cursor.close()
+    conn.close()
+
+if __name__ == "__main__":
+    main()
+
+
+'=================
+
+Sub ConfigureChart()
+    Dim ws As Worksheet
+    Dim chartObj As ChartObject
+    Dim chart As Chart
+
+    ' Set the worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Adjust the sheet name if necessary
+
+    ' Check if the chart already exists; if not, create a new chart
+    On Error Resume Next
+    Set chartObj = ws.ChartObjects("MyChart")
+    On Error GoTo 0
+
+    If chartObj Is Nothing Then
+        ' Create a new chart
+        Set chartObj = ws.ChartObjects.Add(Left:=100, Width:=600, Top:=50, Height:=400)
+        chartObj.Name = "MyChart"
+    End If
+
+    Set chart = chartObj.Chart
+
+    ' Set chart data range (adjust this range as per your data)
+    chart.SetSourceData Source:=ws.Range("A1:B10") ' Adjust the range according to your data
+
+    ' Set chart title
+    chart.HasTitle = True
+    chart.ChartTitle.Text = "Sample Chart Title"
+
+    ' Set X-axis title
+    chart.Axes(xlCategory, xlPrimary).HasTitle = True
+    chart.Axes(xlCategory, xlPrimary).AxisTitle.Text = "X-Axis Title"
+
+    ' Set Y-axis title
+    chart.Axes(xlValue, xlPrimary).HasTitle = True
+    chart.Axes(xlValue, xlPrimary).AxisTitle.Text = "Y-Axis Title"
+
+    ' Position the legend below the chart
+    chart.HasLegend = True
+    chart.Legend.Position = xlLegendPositionBottom
+
+    ' Adjust the chart area size
+    chart.ChartArea.Width = 500
+    chart.ChartArea.Height = 300
+
+    ' Adjust the plot area size (within the chart area)
+    chart.PlotArea.Width = 450
+    chart.PlotArea.Height = 250
+    chart.PlotArea.Left = 25
+    chart.PlotArea.Top = 25
+
+    ' Additional formatting (optional)
+    With chart.ChartArea
+        .Format.Line.Visible = msoTrue
+        .Format.Line.ForeColor.RGB = RGB(0, 0, 0) ' Black border
+    End With
+
+    MsgBox "Chart has been configured successfully!", vbInformation
+End Sub
+
+
+'=========
+Sub AddSecondsAndWriteToCell()
+    Dim currentTime As Date
+    Dim newTime As Date
+    Dim secondsToAdd As Integer
+    Dim formattedTime As String
+
+    ' Set the current time
+    currentTime = Now
+
+    ' Specify the number of seconds to add
+    secondsToAdd = 45 ' Adjust the number of seconds as needed
+
+    ' Add seconds to the current time
+    newTime = DateAdd("s", secondsToAdd, currentTime)
+
+    ' Format the new time in MM/DD/YYYY HH:MM:SS
+    formattedTime = Format(newTime, "MM/DD/YYYY HH:MM:SS")
+
+    ' Write the formatted time to cell A1
+    ThisWorkbook.Sheets("Sheet1").Range("A1").Value = formattedTime
+End Sub
+
+
+'TIMEZONE
+
+' Module-level declarations for Windows API structures and functions
+Private Type SYSTEMTIME
+    Year As Integer
+    Month As Integer
+    DayOfWeek As Integer
+    Day As Integer
+    Hour As Integer
+    Minute As Integer
+    Second As Integer
+    Milliseconds As Integer
+End Type
+
+Private Type TIME_ZONE_INFORMATION
+    Bias As Long
+    StandardName(0 To 31) As Integer
+    StandardDate As SYSTEMTIME
+    StandardBias As Long
+    DaylightName(0 To 31) As Integer
+    DaylightDate As SYSTEMTIME
+    DaylightBias As Long
+End Type
+
+Private Declare PtrSafe Function GetTimeZoneInformation Lib "kernel32" ( _
+    lpTimeZoneInformation As TIME_ZONE_INFORMATION) As Long
+
+' Function to get the time zone offset in minutes
+Private Function GetTimeZoneBias() As Long
+    Dim tzi As TIME_ZONE_INFORMATION
+    Dim result As Long
+    result = GetTimeZoneInformation(tzi)
+    GetTimeZoneBias = tzi.Bias + IIf(result = 2, tzi.DaylightBias, tzi.StandardBias)
+End Function
+
+' Function to determine if DST is currently in effect
+Private Function IsDaylightSavingTime() As Boolean
+    Dim tzi As TIME_ZONE_INFORMATION
+    Dim result As Long
+    result = GetTimeZoneInformation(tzi)
+    IsDaylightSavingTime = (result = 2)
+End Function
+
+Sub CheckTimeZoneForUserInput(dateTime As Date)
+    Dim utcTime As Date
+    Dim estTime As Date
+    Dim istTime As Date
+    Dim estOffset As Long
+    Dim istOffset As Long
+    Dim timeZone As String
+    
+    ' Convert user-specified date and time to UTC by applying the local time zone bias
+    utcTime = DateAdd("n", GetTimeZoneBias() * -1, dateTime)
+    
+    ' Calculate offsets for EST and IST
+    estOffset = -5 ' EST (UTC-5)
+    istOffset = 5.5 ' IST (UTC+5:30)
+    
+    ' Convert UTC time to EST/EDT and IST by applying the offsets
+    estTime = DateAdd("h", estOffset, utcTime)
+    istTime = DateAdd("h", istOffset, utcTime)
+    
+    ' Determine the time zone based on the user-specified date and time
+    If dateTime = estTime Then
+        timeZone = "Eastern Standard Time (EST)"
+    ElseIf dateTime = istTime Then
+        timeZone = "Indian Standard Time (IST)"
+    Else
+        timeZone = "Unknown"
+    End If
+    
+    ' Display the result
+    MsgBox "The provided date and time " & Format(dateTime, "MM/DD/YYYY HH:MM:SS") & " is in " & timeZone, vbInformation, "Time Zone Check"
+End Sub
+
+' Example usage:
+Sub TestCheckTimeZone()
+    Dim userInput As Date
+    ' Prompt the user for a date and time (you can replace this with your own date and time input method)
+    userInput = InputBox("Enter a date and time (MM/DD/YYYY HH:MM:SS):", "User Input")
+    ' Call the function to check the time zone
+    CheckTimeZoneForUserInput userInput
+End Sub
+
+
+
+
+# Python script to check timezone or convert dates to EST
+
+from datetime import datetime
+import pytz
+
+def check_timezone_or_convert_to_est(input_datetime_str):
+    try:
+        # Parse the input datetime string
+        input_datetime = datetime.strptime(input_datetime_str, "%m/%d/%Y %H:%M:%S")
+
+        # Get the local timezone
+        local_tz = pytz.timezone('UTC')  # Assuming the input datetime is in UTC
+
+        # Convert input datetime to EST (Eastern Standard Time)
+        est_tz = pytz.timezone('America/New_York')
+        est_datetime = local_tz.localize(input_datetime).astimezone(est_tz)
+
+        # Format the EST datetime as required
+        formatted_est_datetime = est_datetime.strftime("%m/%d/%Y %H:%M:%S")
+
+        return formatted_est_datetime
+
+    except Exception as e:
+        return str(e)
+
+# Example usage (for testing)
+if __name__ == "__main__":
+    input_datetime_str = "06/25/2024 15:30:00"
+    result = check_timezone_or_convert_to_est(input_datetime_str)
+    print(result)
+
+
+Sub CallPythonScript()
+    Dim pythonPath As String
+    Dim scriptPath As String
+    Dim inputDatetime As String
+    Dim outputDatetime As String
+    Dim command As String
+    Dim pythonOutput As String
+    
+    ' Set the path to your Python executable
+    pythonPath = "C:\Python39\python.exe" ' Adjust the path as per your Python installation
+    
+    ' Set the path to your Python script
+    scriptPath = "C:\path\to\your\python\script.py" ' Adjust the path to your Python script
+    
+    ' Example input datetime string (adjust as needed)
+    inputDatetime = "06/25/2024 15:30:00"
+    
+    ' Construct the command to be executed
+    command = """" & pythonPath & """ """ & scriptPath & """ """ & inputDatetime & """"
+    
+    ' Run the Python script and capture output
+    pythonOutput = CreateObject("WScript.Shell").Exec(command).StdOut.ReadAll
+    
+    ' Display the output in Excel
+    MsgBox "Converted to EST: " & pythonOutput, vbInformation, "Python Script Output"
+    
+    ' You can further process the output here, such as writing it to a cell in Excel
+    ' Example: Range("A1").Value = pythonOutput
+End Sub
+
