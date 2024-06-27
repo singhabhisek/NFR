@@ -1,3 +1,414 @@
+
+Sub callaa()
+CreateScatterGraphWithDynamicYInterval
+End Sub
+Sub CreateScatterGraphWithDynamicYInterval(Optional xIntervalMinutes As Double = -1)
+    Dim ws As Worksheet
+    Dim chartObj As ChartObject
+    Dim chart As chart
+    Dim xMax As Double
+    Dim yMax As Double
+    Dim xStart As Double
+    Dim yAxisMax As Double
+    Dim r As Range
+    Dim lastRow As Long, lastCol As Long
+    Dim elapsedTimeRange As Range
+    Dim dataRange As Range
+    Dim maxY As Double, minY As Double
+    Dim cell As Range
+    
+    ' Customize these variables
+    Dim yInterval As Double
+    yInterval = -1 ' Default to -1, indicating automatic calculation
+    
+    ' Set the worksheet
+    Set ws = ActiveSheet
+    
+    ' Find the last row and column of data
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    lastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+    
+    ' Set the range for the data
+    Set r = ws.Range(ws.Cells(1, 1), ws.Cells(lastRow, lastCol))
+    Set elapsedTimeRange = ws.Range(ws.Cells(2, 1), ws.Cells(lastRow, 1))
+    Set dataRange = ws.Range(ws.Cells(2, 2), ws.Cells(lastRow, lastCol))
+    
+    ' Convert Elapsed Time to serial date-time values and format as Time
+    ' For Each cell In elapsedTimeRange
+    '     cell.Value = TimeValue(cell.Value)
+    '     cell.NumberFormat = "hh:mm:ss"
+    ' Next cell
+    
+    ' Define the start point for X-axis (00:00:00 in serial format)
+    xStart = 0
+    xMax = WorksheetFunction.Max(elapsedTimeRange)
+    yMax = WorksheetFunction.Max(dataRange)
+    minY = WorksheetFunction.Min(dataRange)
+    
+    ' Automatically determine X-axis interval if not provided by the user
+    If xIntervalMinutes < 0 Then
+        xIntervalMinutes = DetermineXInterval(elapsedTimeRange)
+    End If
+    
+    ' Automatically determine Y-axis interval if not provided
+    If yInterval < 0 Then
+        yInterval = DetermineYInterval(minY, yMax)
+    End If
+    
+    ' Define the maximum values for X and Y axes
+    xMax = xMax + (xIntervalMinutes / 1440) * 2 ' Convert minutes to fraction of a day
+    yAxisMax = yMax + yInterval * 2
+    
+    ' Create the chart
+    Set chartObj = ws.ChartObjects.Add(Left:=100, Width:=600, Top:=50, Height:=400)
+    Set chart = chartObj.chart
+    chart.SetSourceData Source:=r
+    chart.ChartType = xlXYScatterLines ' Set to Scatter with Straight Lines
+    
+    ' Position the chart to create space for X-axis labels below the plot area
+    chartObj.Top = 150 ' Adjust top position to create space for X-axis labels
+    
+    ' Customize the X-axis
+    With chart.Axes(xlCategory)
+        .MinimumScale = xStart
+        .MaximumScale = xMax
+        .MajorUnit = xIntervalMinutes / 1440 ' Interval in fraction of a day
+        .TickLabels.NumberFormat = "hh:mm:ss"
+        .TickLabels.Orientation = xlUpward
+    End With
+    
+    ' Customize the Y-axis
+    With chart.Axes(xlValue)
+        .MinimumScale = 0
+        .MaximumScale = yAxisMax
+        .MajorUnit = yInterval
+    End With
+    
+    ' Add title and labels
+    chart.HasTitle = True
+    chart.ChartTitle.Text = "Transactions Per Sec"
+    chart.Axes(xlCategory, xlPrimary).HasTitle = True
+    chart.Axes(xlCategory, xlPrimary).AxisTitle.Text = "Elapsed Time"
+    chart.Axes(xlValue, xlPrimary).HasTitle = True
+    chart.Axes(xlValue, xlPrimary).AxisTitle.Text = "TPS"
+    
+    ' Format the lines
+    Dim i As Integer
+    For i = 1 To chart.SeriesCollection.Count
+        chart.SeriesCollection(i).Format.Line.Weight = 2.5
+        chart.SeriesCollection(i).MarkerStyle = xlNone ' Remove data points
+    Next i
+    chart.DisplayBlanksAs = xlInterpolated
+    chart.PlotArea.Select
+    Selection.Height = 264.665
+    chart.Axes(xlCategory).AxisTitle.Select
+    Selection.Left = 249.737
+    Selection.Top = 362.794
+    chart.ChartArea.Select
+End Sub
+
+Function DetermineXInterval(elapsedTimeRange As Range) As Double
+    ' Calculate the default X-axis interval based on the elapsed time range
+    Dim minTime As Double
+    Dim maxTime As Double
+    Dim rangeInMinutes As Double
+    
+    minTime = WorksheetFunction.Min(elapsedTimeRange)
+    maxTime = WorksheetFunction.Max(elapsedTimeRange)
+    
+    ' Calculate the range in minutes
+    rangeInMinutes = (maxTime - minTime) * 1440 ' Convert days to minutes
+    
+    ' Determine the interval based on the range
+    If rangeInMinutes <= 2 Then
+        DetermineXInterval = 2 ' If range is <= 2 minutes, use 2 minutes interval (minimum)
+    ElseIf rangeInMinutes <= 30 Then
+        DetermineXInterval = 1 ' If range is <= 30 minutes, use 1 minute interval
+    ElseIf rangeInMinutes <= 120 Then
+        DetermineXInterval = 5 ' If range is <= 2 hours, use 5 minutes interval
+    Else
+        DetermineXInterval = 15 ' For larger ranges, use 15 minutes interval
+    End If
+End Function
+
+Function DetermineYInterval(minY As Double, maxY As Double) As Double
+    Dim rangeY As Double
+    Dim magnitude As Double
+    Dim interval As Double
+    
+    rangeY = maxY - minY
+    
+    If rangeY = 0 Then
+        DetermineYInterval = maxY / 5 ' If no range, return a fraction of the value
+        Exit Function
+    End If
+    
+    magnitude = 10 ^ Int(WorksheetFunction.Log10(rangeY))
+    interval = magnitude / 2 ' Start with half the magnitude as the interval
+    
+    ' Adjust interval based on range
+    If rangeY / interval > 10 Then
+        interval = magnitude
+    ElseIf rangeY / interval < 2 Then
+        interval = magnitude / 5
+    End If
+    
+    ' Return the interval
+    DetermineYInterval = interval
+End Function
+
+Sub ConfigureChart()
+    Dim ws As Worksheet
+    Dim chartObj As ChartObject
+    Dim chart As chart
+
+    ' Set the worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Adjust the sheet name if necessary
+
+    ' Check if the chart already exists; if not, create a new chart
+    On Error Resume Next
+    Set chartObj = ws.ChartObjects("MyChart")
+    On Error GoTo 0
+
+    If chartObj Is Nothing Then
+        ' Create a new chart
+        Set chartObj = ws.ChartObjects.Add(Left:=100, Width:=600, Top:=50, Height:=400)
+        chartObj.Name = "MyChart"
+    End If
+
+    Set chart = chartObj.chart
+
+    ' Set chart data range (adjust this range as per your data)
+    chart.SetSourceData Source:=ws.Range("A1:N9") ' Adjust the range according to your data
+
+    ' Set chart title
+    chart.HasTitle = True
+    chart.ChartTitle.Text = "Sample Chart Title"
+
+    ' Set X-axis title
+    chart.Axes(xlCategory, xlPrimary).HasTitle = True
+    chart.Axes(xlCategory, xlPrimary).AxisTitle.Text = "X-Axis Title"
+
+    ' Set Y-axis title
+    chart.Axes(xlValue, xlPrimary).HasTitle = True
+    chart.Axes(xlValue, xlPrimary).AxisTitle.Text = "Y-Axis Title"
+
+    ' Position the legend below the chart
+    chart.HasLegend = True
+    chart.Legend.Position = xlLegendPositionBottom
+
+    ' Adjust the chart area size
+    chart.ChartArea.Width = 500
+    chart.ChartArea.Height = 300
+
+    ' Adjust the plot area size (within the chart area)
+    chart.PlotArea.Width = 450
+    chart.PlotArea.Height = 250
+    chart.PlotArea.Left = 25
+    chart.PlotArea.Top = 25
+
+    ' Additional formatting (optional)
+    With chart.ChartArea
+        .Format.Line.Visible = msoTrue
+        .Format.Line.ForeColor.RGB = RGB(0, 0, 0) ' Black border
+    End With
+    
+    ' Adjust legend position
+    With chart.Legend
+        .Position = xlLegendPositionBottom
+    End With
+    
+    ' Retrieve X-axis and title
+    Set xAxis = chart.Axes(xlCategory)
+    Set xAxisTitle = xAxis.AxisTitle
+    
+    ' Move legend below X-axis title
+    With chart.Legend
+        .Left = chart.PlotArea.InsideLeft
+        .Top = xAxisTitle.Top + xAxisTitle.Height + 10 ' Adjust the 10 value for spacing
+        .Width = chart.PlotArea.InsideWidth
+    End With
+    
+        ' Adjust legend position
+    With chart.Legend
+        .Position = xlLegendPositionBottom
+    End With
+    
+    ' Retrieve X-axis and title
+    Set xAxis = chart.Axes(xlCategory)
+    Set xAxisTitle = xAxis.AxisTitle
+    
+    ' Move legend below X-axis title
+    With chart.Legend
+        .Top = chartObj.Top + chartObj.Height + 10 ' Adjust for spacing below the chart
+        .Left = chartObj.Left
+        .Width = chartObj.Width
+    End With
+    
+    ' Adjust chart plot area to accommodate the legend
+    chartObj.Height = chartObj.Height + chart.Legend.Height + 20 ' Adjust spacing as needed
+    
+    ' Resize chart to fit
+    chartObj.Height = chartObj.Height + chart.Legend.Height + 20 ' Add additional space for the legend
+    
+    ' Count the number of series in the chart
+    seriesCount = chart.SeriesCollection.Count
+    
+    ' If series count is 10 or less, position legend below X-axis title
+    If seriesCount <= 10 Then
+        ' Adjust legend position
+        With chart.Legend
+            .Position = xlLegendPositionBottom
+            .Left = chartObj.Left ' Align with chart left
+            .Width = chartObj.Width ' Make legend width same as chart width
+        End With
+        
+        ' Adjust chart area to accommodate legend
+        chart.PlotArea.Height = chart.PlotArea.Height - chart.Legend.Height - 20 ' Adjust for spacing as needed
+        chart.PlotArea.Top = chart.PlotArea.Top - 10 ' Adjust if needed for alignment
+        
+        ' Move legend below chart
+        chart.Legend.Top = chart.PlotArea.Top + chart.PlotArea.Height + 10 ' Position legend below the plot area
+
+    Else
+        ' Position legend to the right if series count is more than 10
+        With chart.Legend
+            .Position = xlLegendPositionRight
+        End With
+        
+        ' Adjust chart plot area if legend is on the right
+        chart.PlotArea.Width = chart.PlotArea.Width - chart.Legend.Width - 20 ' Adjust for spacing as needed
+    End If
+
+    MsgBox "Chart has been configured successfully!", vbInformation
+End Sub
+
+
+Sub ConfigureChart2()
+    Dim ws As Worksheet
+    Dim chartObj As ChartObject
+    Dim chart As chart
+    Dim seriesCount As Integer
+    Dim rngX As Range
+    Dim series As series
+
+    ' Set the worksheet
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Adjust the sheet name if necessary
+
+    ' Check if the chart already exists; if not, create a new chart
+    On Error Resume Next
+    Set chartObj = ws.ChartObjects("MyChart")
+    On Error GoTo 0
+
+    If chartObj Is Nothing Then
+        ' Create a new chart
+        Set chartObj = ws.ChartObjects.Add(Left:=100, Width:=600, Top:=50, Height:=400)
+        chartObj.Name = "MyChart"
+    End If
+
+    Set chart = chartObj.chart
+
+    ' Set chart data range (adjust this range as per your data)
+    chart.SetSourceData Source:=ws.Range("A1:N9") ' Adjust the range according to your data
+
+    ' Set chart title
+    chart.HasTitle = True
+    chart.ChartTitle.Text = "Sample Chart Title"
+
+    ' Set X-axis title
+    chart.Axes(xlCategory, xlPrimary).HasTitle = True
+    chart.Axes(xlCategory, xlPrimary).AxisTitle.Text = "X-Axis Title"
+
+    ' Set Y-axis title
+    chart.Axes(xlValue, xlPrimary).HasTitle = True
+    chart.Axes(xlValue, xlPrimary).AxisTitle.Text = "Y-Axis Title"
+
+    ' Set DateTime column as X-axis
+    Set rngX = ws.Range("A2:A9") ' Adjust the range according to your data
+
+    ' Update XValues for each series to use DateTime
+    For Each series In chart.SeriesCollection
+        series.XValues = rngX
+    Next series
+
+    ' Count the number of series in the chart
+    seriesCount = chart.SeriesCollection.Count
+    
+    ' Adjust legend and chart area based on series count
+    If seriesCount <= 10 Then
+        ' Position legend below the chart
+        chart.Legend.Position = xlLegendPositionBottom
+        chart.Legend.Left = chartObj.Left
+        chart.Legend.Width = chartObj.Width
+
+        ' Adjust chart plot area
+        chart.PlotArea.Height = chart.PlotArea.Height - chart.Legend.Height - 20
+        chart.Legend.Top = chart.PlotArea.InsideTop + chart.PlotArea.InsideHeight + 10
+    Else
+        ' Position legend to the right
+        chart.Legend.Position = xlLegendPositionRight
+        chart.PlotArea.Width = chart.PlotArea.Width - chart.Legend.Width - 20
+    End If
+
+    MsgBox "Chart has been configured successfully!", vbInformation
+End Sub
+
+Sub Set1upChartAndLegend()
+    Dim ws As Worksheet
+    Dim chartObj As ChartObject
+    Dim chart As chart
+    Dim seriesCount As Integer
+    Dim rng As Range
+    Dim series As series
+    
+    ' Define your sheet and chart object
+    Set ws = ThisWorkbook.Sheets("Sheet1") ' Adjust the sheet name
+    Set chartObj = ws.ChartObjects("MyChart") ' Adjust the chart name
+    Set chart = chartObj.chart
+    
+    ' Define the range for X-axis (DateTime) and Y-values
+    ' Adjust the range based on your actual data
+    Set rng = ws.Range("A2:A9") ' DateTime values range
+    
+    ' Clear existing series
+    chart.SeriesCollection.NewSeries
+    
+    ' Set DateTime column as X-axis for each series
+    chart.SetSourceData Source:=Range("Sheet1!$A$1:$N$9")
+    ' Count the number of series in the chart
+    seriesCount = chart.SeriesCollection.Count
+    
+    ' If series count is 10 or less, position legend below X-axis title
+    If seriesCount <= 10 Then
+        ' Adjust legend position
+        With chart.Legend
+            .Position = xlLegendPositionBottom
+            .Left = chartObj.Left ' Align with chart left
+            .Width = chartObj.Width ' Make legend width same as chart width
+        End With
+        
+        ' Adjust chart area to accommodate legend
+        chart.PlotArea.Height = chart.PlotArea.Height - chart.Legend.Height - 20 ' Adjust for spacing as needed
+        chart.PlotArea.Top = chart.PlotArea.Top - 10 ' Adjust if needed for alignment
+        
+        ' Move legend below chart
+        chart.Legend.Top = chart.PlotArea.Top + chart.PlotArea.Height + 10 ' Position legend below the plot area
+
+    Else
+        ' Position legend to the right if series count is more than 10
+        With chart.Legend
+            .Position = xlLegendPositionRight
+        End With
+        
+        ' Adjust chart plot area if legend is on the right
+        chart.PlotArea.Width = chart.PlotArea.Width - chart.Legend.Width - 20 ' Adjust for spacing as needed
+    End If
+End Sub
+
+
+
+
+
 Sub CreateScatterGraphWithDynamicYInterval(Optional xIntervalMinutes As Double = -1)
     Dim ws As Worksheet
     Dim chartObj As ChartObject
