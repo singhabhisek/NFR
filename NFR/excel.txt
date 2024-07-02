@@ -1,4 +1,265 @@
+Sub CreateSheets()
+    Dim sheetNames As Variant
+    Dim RunId As String
+    Dim i As Integer
 
+    ' Define the RunId and sheet names with it
+    RunId = "1234"  ' Replace this with your actual RunId
+    sheetNames = Array("R" & RunId & "_Sheet1", "R" & RunId & "_Sheet2", "R" & RunId & "_Sheet3", "R" & RunId & "_Sheet4")
+    
+    ' Loop through the names and create the sheets
+    For i = LBound(sheetNames) To UBound(sheetNames)
+        Worksheets.Add(After:=Worksheets(Worksheets.Count)).Name = sheetNames(i)
+    Next i
+End Sub
+
+
+==============
+
+import sys
+import pyodbc
+import openpyxl
+
+def execute_queries(mdb_path, queries):
+    # Connect to the MDB file
+    conn_str = (
+        r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
+        r'DBQ=' + mdb_path + ';'
+    )
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+
+    for idx, query in enumerate(queries):
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+
+        # Create a new workbook for each query result
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = f'Query_{idx + 1}'
+
+        # Write column headers
+        for col_num, column in enumerate(columns, 1):
+            ws.cell(row=1, column=col_num, value=column)
+
+        # Write data rows
+        for row_num, row in enumerate(rows, 2):
+            for col_num, value in enumerate(row, 1):
+                ws.cell(row=row_num, column=col_num, value=value)
+
+        # Save to a temporary file
+        temp_file = f'Query_{idx + 1}.xlsx'
+        wb.save(temp_file)
+
+    conn.close()
+
+if __name__ == "__main__":
+    # Expecting args: mdb_path, query1, query2, query3, query4
+    mdb_path = sys.argv[1]
+    queries = sys.argv[2:6]
+    execute_queries(mdb_path, queries)
+
+
+
+Sub RunPythonScript()
+    Dim objShell As Object
+    Dim mdbPath As String
+    Dim pythonScript As String
+    Dim query1 As String
+    Dim query2 As String
+    Dim query3 As String
+    Dim query4 As String
+    Dim tempFiles() As String
+    Dim i As Integer
+    
+    ' Set the paths and queries
+    mdbPath = "C:\path\to\your\database.mdb"
+    pythonScript = "C:\path\to\query_mdb.py"
+    query1 = "SELECT * FROM Table1;"
+    query2 = "SELECT * FROM Table2;"
+    query3 = "SELECT * FROM Table3;"
+    query4 = "SELECT * FROM Table4;"
+
+    ' Create a shell object to run the Python script
+    Set objShell = VBA.CreateObject("WScript.Shell")
+
+    ' Run the Python script with arguments
+    objShell.Run "python """ & pythonScript & """ """ & mdbPath & """ """ & query1 & """ """ & query2 & """ """ & query3 & """ """ & query4 & """"
+
+    ' Wait for Python to finish
+    Application.Wait (Now + TimeValue("0:00:10"))
+
+    ' Import the results
+    tempFiles = Array("Query_1.xlsx", "Query_2.xlsx", "Query_3.xlsx", "Query_4.xlsx")
+    For i = LBound(tempFiles) To UBound(tempFiles)
+        ImportTempFile tempFiles(i), "Query_" & (i + 1)
+    Next i
+
+    Set objShell = Nothing
+End Sub
+
+Sub ImportTempFile(tempFile As String, sheetName As String)
+    Dim ws As Worksheet
+    Dim wbTemp As Workbook
+    Dim wsTemp As Worksheet
+
+    ' Open the temporary workbook
+    Set wbTemp = Workbooks.Open(Filename:=tempFile)
+
+    ' Copy the data to the current workbook
+    Set wsTemp = wbTemp.Sheets(1)
+    On Error Resume Next
+    Set ws = ThisWorkbook.Sheets(sheetName)
+    On Error GoTo 0
+    If ws Is Nothing Then
+        Set ws = ThisWorkbook.Sheets.Add
+        ws.Name = sheetName
+    End If
+    wsTemp.UsedRange.Copy Destination:=ws.Cells(1, 1)
+
+    ' Close the temporary workbook
+    wbTemp.Close SaveChanges:=False
+
+    ' Delete the temporary file
+    Kill tempFile
+End Sub
+
+
+=====================
+
+
+return to vba - 
+
+import sys
+import pyodbc
+import json
+
+def execute_queries(mdb_path, queries):
+    # Connect to the MDB file
+    conn_str = (
+        r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};'
+        r'DBQ=' + mdb_path + ';'
+    )
+    conn = pyodbc.connect(conn_str)
+    cursor = conn.cursor()
+    results = []
+
+    for query in queries:
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        result = {
+            "columns": columns,
+            "rows": [list(row) for row in rows]
+        }
+        results.append(result)
+
+    conn.close()
+    return results
+
+if __name__ == "__main__":
+    # Expecting args: mdb_path, query1, query2, query3, query4
+    mdb_path = sys.argv[1]
+    queries = sys.argv[2:6]
+    results = execute_queries(mdb_path, queries)
+    print(json.dumps(results))
+
+
+Sub RunPythonScript()
+    Dim objShell As Object
+    Dim objExec As Object
+    Dim stdOut As Object
+    Dim jsonText As String
+    Dim mdbPath As String
+    Dim pythonScript As String
+    Dim query1 As String
+    Dim query2 As String
+    Dim query3 As String
+    Dim query4 As String
+    
+    ' Set the paths and queries
+    mdbPath = "C:\path\to\your\database.mdb"
+    pythonScript = "C:\path\to\query_mdb.py"
+    query1 = "SELECT * FROM Table1;"
+    query2 = "SELECT * FROM Table2;"
+    query3 = "SELECT * FROM Table3;"
+    query4 = "SELECT * FROM Table4;"
+    
+    ' Create a shell object to run the Python script
+    Set objShell = VBA.CreateObject("WScript.Shell")
+    Set objExec = objShell.Exec("python """ & pythonScript & """ """ & mdbPath & """ """ & query1 & """ """ & query2 & """ """ & query3 & """ """ & query4 & """")
+    Set stdOut = objExec.StdOut
+    
+    ' Capture the output of the Python script
+    Do While Not stdOut.AtEndOfStream
+        jsonText = jsonText & stdOut.ReadLine
+    Loop
+    
+    ' Parse and write the results to the Excel sheet
+    WriteResultsToExcel jsonText
+    
+    Set objShell = Nothing
+    Set objExec = Nothing
+    Set stdOut = Nothing
+End Sub
+
+Sub WriteResultsToExcel(jsonText As String)
+    Dim json As Object
+    Dim queryResults As Object
+    Dim queryResult As Object
+    Dim i As Integer, j As Integer
+    Dim sheetName As String
+    Dim ws As Worksheet
+    
+    ' Parse JSON
+    Set json = JsonConverter.ParseJson(jsonText)
+    Set queryResults = json
+    
+    ' Loop through each query result
+    For i = 1 To queryResults.Count
+        Set queryResult = queryResults(i)
+        
+        ' Create or clear the sheet
+        sheetName = "Query_" & i
+        On Error Resume Next
+        Set ws = ThisWorkbook.Sheets(sheetName)
+        On Error GoTo 0
+        If ws Is Nothing Then
+            Set ws = ThisWorkbook.Sheets.Add
+            ws.Name = sheetName
+        Else
+            ws.Cells.Clear
+        End If
+        
+        ' Write columns
+        For j = 1 To queryResult("columns").Count
+            ws.Cells(1, j).Value = queryResult("columns")(j)
+        Next j
+        
+        ' Write rows
+        Dim row As Variant
+        For j = 1 To queryResult("rows").Count
+            row = queryResult("rows")(j)
+            ws.Cells(j + 1, 1).Resize(1, UBound(row) + 1).Value = row
+        Next j
+    Next i
+End Sub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+==========
 Sub RunPythonQueriesWithSheetNames()
     Dim pyScriptPath As String
     Dim queriesWithSheets As String
