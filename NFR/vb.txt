@@ -1,0 +1,381 @@
+Sub InsertExcelChartsIntoPPT()
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim slide As Object
+    Dim placeholder As Object
+    Dim excelApp As Object
+    Dim excelBook As Object
+    Dim excelSheet As Object
+    Dim excelChart As Object
+    Dim i As Integer
+    
+    ' Initialize PowerPoint
+    Set pptApp = CreateObject("PowerPoint.Application")
+    Set pptPres = pptApp.ActivePresentation
+    
+    ' Access the slide created by the previous macro
+    Set slide = pptPres.Slides(pptPres.Slides.Count)
+    
+    ' Initialize Excel
+    Set excelApp = CreateObject("Excel.Application")
+    excelApp.Visible = True
+    ' Change the path to your workbook
+    Set excelBook = ActiveWorkbook
+    ' Change the sheet name to your actual sheet name
+    Set excelSheet = excelBook.Sheets("Sheet1")
+    
+    ' Loop to insert charts from Excel to PowerPoint placeholders
+    For i = 1 To 4
+        ' Change "ChartNameX" to your actual chart names
+        Set excelChart = excelSheet.ChartObjects("MyChart").Chart
+        
+        ' Copy the chart as a picture
+        excelChart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
+        
+        ' Find the placeholder
+        Set placeholder = slide.Shapes("Placeholder" & i)
+        
+        ' Paste the chart into PowerPoint and resize to fit the placeholder
+        slide.Shapes.PasteSpecial DataType:=ppPasteEnhancedMetafile
+        With slide.Shapes(slide.Shapes.Count)
+            .LockAspectRatio = msoFalse
+            .Top = placeholder.Top
+            .Left = placeholder.Left
+            .Width = placeholder.Width
+            .Height = placeholder.Height
+        End With
+    Next i
+    
+    ' Clean up
+    'excelBook.Close SaveChanges:=False
+    'excelApp.Quit
+    
+    Set pptApp = Nothing
+    Set pptPres = Nothing
+    Set slide = Nothing
+    Set placeholder = Nothing
+    Set excelApp = Nothing
+    Set excelBook = Nothing
+    Set excelSheet = Nothing
+    Set excelChart = Nothing
+End Sub
+
+
+Sub AssignSlideNames()
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim slide As Object
+    
+    ' Initialize PowerPoint
+    Set pptApp = CreateObject("PowerPoint.Application")
+    Set pptPres = pptApp.ActivePresentation
+    pptApp.Visible = True
+    
+    ' Assign names to slides
+    For Each slide In pptPres.Slides
+        Select Case slide.slideIndex
+            Case 1
+                slide.Tags.Add "SlideName", "IntroSlide"
+            Case 2
+                slide.Tags.Add "SlideName", "DataSlide"
+            Case 3
+                slide.Tags.Add "SlideName", "SummarySlide"
+            ' Add more cases as needed
+        End Select
+    Next slide
+End Sub
+
+
+Sub InsertExcelChartsIntoNamedSlide()
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim slide As Object
+    Dim placeholder As Object
+    Dim excelApp As Object
+    Dim excelBook As Object
+    Dim excelSheet As Object
+    Dim excelChart As Object
+    Dim i As Integer
+    Dim slideName As String
+    
+    ' Initialize PowerPoint
+    Set pptApp = CreateObject("PowerPoint.Application")
+    Set pptPres = pptApp.ActivePresentation
+    pptApp.Visible = True
+    
+    ' Initialize Excel
+    Set excelApp = CreateObject("Excel.Application")
+    excelApp.Visible = True
+    ' Change the path to your workbook
+    Set excelBook = ActiveWorkbook
+    ' Change the sheet name to your actual sheet name
+    Set excelSheet = excelBook.Sheets("Sheet1")
+    
+    ' Define slide name
+    slideName = "SummarySlide"
+    
+    ' Create or find the slide and assign the name if not already assigned
+    Set slide = Nothing
+    On Error Resume Next
+    Set slide = GetSlideByName(pptPres, slideName)
+    On Error GoTo 0
+    
+'    If slide Is Nothing Then
+'        ' Create a new slide and name it
+'        Set slide = pptPres.Slides.Add(pptPres.Slides.Count + 1, 1)
+'        slide.Tags.Add "SlideName", slideName
+'        ' Add header, footer, and placeholders as in the previous code
+'        ' (Omitted here for brevity, reuse code from previous example)
+'    End If
+'
+        ' Change "ChartNameX" to your actual chart names
+        Set excelChart = excelSheet.ChartObjects("MyChart").Chart
+        
+        ' Copy the chart as a picture
+        excelChart.CopyPicture Appearance:=xlScreen, Format:=xlPicture
+        
+        ' Find the placeholder
+        Set placeholder = slide.Shapes("Placeholder" & 4)
+        
+        ' Paste the chart into PowerPoint and resize to fit the placeholder
+        slide.Shapes.PasteSpecial DataType:=ppPasteEnhancedMetafile
+        With slide.Shapes(slide.Shapes.Count)
+            .LockAspectRatio = msoFalse
+            .Top = placeholder.Top
+            .Left = placeholder.Left
+            .Width = placeholder.Width
+            .Height = placeholder.Height
+        End With
+
+    
+    
+End Sub
+
+' Helper function to get a slide by its name
+Function GetSlideByName(pptPres As Object, slideName As String) As Object
+    Dim slide As Object
+    For Each slide In pptPres.Slides
+        If slide.Tags("SlideName") = slideName Then
+            Set GetSlideByName = slide
+            Exit Function
+        End If
+    Next slide
+    Set GetSlideByName = Nothing
+End Function
+
+
+Sub CreateSlideWithRectangles()
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim slideIndex As Integer
+    Dim slideHeight As Single
+    Dim slideWidth As Single
+    Dim headerHeight As Single
+    Dim footerHeight As Single
+    Dim placeholderHeight As Single
+    Dim placeholderWidth As Single
+    Dim gap As Single
+    Dim slide As Object
+    Dim i As Integer
+    
+    ' Initialize PowerPoint
+    Set pptApp = CreateObject("PowerPoint.Application")
+    Set pptPres = pptApp.ActivePresentation
+    pptApp.Visible = True
+    
+    ' Create a new slide at the end of the presentation
+    slideIndex = pptPres.Slides.Count + 1
+    Set slide = pptPres.Slides.Add(slideIndex, 12) ' Use ppLayoutBlank
+    
+    ' Set slide dimensions
+    slideHeight = pptPres.PageSetup.slideHeight
+    slideWidth = pptPres.PageSetup.slideWidth
+    
+    ' Define header and footer heights
+    headerHeight = slideHeight * 0.1
+    footerHeight = slideHeight * 0.05
+    
+    ' Define placeholder dimensions and gap
+    gap = 20
+    placeholderHeight = 3.04 * 72 ' Convert inches to points
+    placeholderWidth = (slideWidth - 3 * gap) / 2
+'
+'    ' Ensure placeholders fit within the slide
+'    If 2 * placeholderHeight + 3 * gap + headerHeight + footerHeight > slideHeight Then
+'        MsgBox "Placeholders and gaps exceed slide height.", vbExclamation
+'        Exit Sub
+'    End If
+    
+    ' Add header rectangle
+    With slide.Shapes.AddShape(msoShapeRectangle, 0, 0, slideWidth, headerHeight)
+        .Line.Visible = msoFalse ' No outline
+        .Fill.Visible = msoFalse ' No fill
+        .Name = "Header"
+    End With
+    
+    ' Add footer rectangle
+    With slide.Shapes.AddShape(msoShapeRectangle, 0, slideHeight - footerHeight, slideWidth, footerHeight)
+        .Line.Visible = msoFalse ' No outline
+        .Fill.Visible = msoFalse ' No fill
+        .Name = "Footer"
+    End With
+    
+    ' Add four placeholder rectangles
+    For i = 1 To 4
+        Dim leftPos As Single
+        Dim topPos As Single
+        leftPos = gap + ((i - 1) Mod 2) * (placeholderWidth + gap)
+        topPos = headerHeight + gap + Int((i - 1) / 2) * (placeholderHeight + gap)
+        
+        Dim placeholder As Object
+        Set placeholder = slide.Shapes.AddShape(msoShapeRectangle, leftPos, topPos, placeholderWidth, placeholderHeight)
+        With placeholder
+            .Line.DashStyle = msoLineDash
+            .Line.Weight = 1
+            .Fill.Visible = msoFalse ' No fill
+            .Name = "Placeholder" & i
+        End With
+    Next i
+End Sub
+
+
+Sub CopyAndRenameSlide()
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim slideIndex As Integer
+    Dim slideToCopy As Object
+    Dim copiedSlide As Object
+    
+    ' Initialize PowerPoint
+    Set pptApp = CreateObject("PowerPoint.Application")
+    Set pptPres = pptApp.ActivePresentation
+    pptApp.Visible = True
+    
+    ' Determine the index or name of the slide to copy (in this example, Slide 2)
+    slideIndex = 2 ' Adjust this index as per your requirement
+    
+    ' Check if slideIndex is within range
+    If slideIndex < 1 Or slideIndex > pptPres.Slides.Count Then
+        MsgBox "Slide index is out of range.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Set the slide to copy
+    Set slideToCopy = pptPres.Slides(slideIndex)
+    
+    ' Copy the slide
+    Set copiedSlide = slideToCopy.Duplicate
+    
+    ' Rename the copied slide
+    copiedSlide.Name = "SlideName4"
+    
+    ' Clean up
+    Set pptApp = Nothing
+    Set pptPres = Nothing
+    Set slideToCopy = Nothing
+    Set copiedSlide = Nothing
+End Sub
+
+
+
+Sub CopyAndMoveSlide()
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim slideIndex As Integer
+    Dim slideToCopy As Object
+    Dim copiedSlide As Object
+    Dim destinationIndex As Integer
+    
+    ' Initialize PowerPoint
+    Set pptApp = CreateObject("PowerPoint.Application")
+    Set pptPres = pptApp.ActivePresentation
+    pptApp.Visible = True
+    
+    ' Determine the index or name of the slide to copy (in this example, Slide 2)
+    slideIndex = 2 ' Adjust this index as per your requirement
+    
+    ' Check if slideIndex is within range
+    If slideIndex < 1 Or slideIndex > pptPres.Slides.Count Then
+        MsgBox "Slide index is out of range.", vbExclamation
+        Exit Sub
+    End If
+    
+    ' Set the slide to copy
+    Set slideToCopy = pptPres.Slides(slideIndex)
+    
+    ' Copy the slide
+    Set copiedSlide = slideToCopy.Duplicate
+    
+    ' Move the copied slide to the end of the presentation
+    copiedSlide.Move pptPres.Slides.Count
+    
+    ' Optionally, move the copied slide to a user-defined position (destinationIndex)
+    destinationIndex = 4 ' Example: Move to the 4th position
+    
+    If destinationIndex >= 1 And destinationIndex <= pptPres.Slides.Count Then
+        copiedSlide.MoveTo destinationIndex
+    Else
+        MsgBox "Destination index is out of range.", vbExclamation
+    End If
+    
+    ' Clean up
+    Set pptApp = Nothing
+    Set pptPres = Nothing
+    Set slideToCopy = Nothing
+    Set copiedSlide = Nothing
+End Sub
+
+Sub CheckSlideName()
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim slideIndex As Integer
+    Dim slide As Object
+    
+    ' Initialize PowerPoint
+    Set pptApp = CreateObject("PowerPoint.Application")
+    Set pptPres = pptApp.ActivePresentation
+    pptApp.Visible = True
+    
+    ' Specify the slide index or name to check (adjust as needed)
+    slideIndex = 1 ' Example: Check Slide 4
+    
+    ' Check if slideIndex is within range
+    If slideIndex >= 1 And slideIndex <= pptPres.Slides.Count Then
+        Set slide = pptPres.Slides(slideIndex)
+        MsgBox "Slide " & slideIndex & " is named: " & slide.Name
+    Else
+        MsgBox "Slide index is out of range.", vbExclamation
+    End If
+    
+    ' Clean up
+    Set pptApp = Nothing
+    Set pptPres = Nothing
+    Set slide = Nothing
+End Sub
+
+Sub CheckSlideNamesWithTags()
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim slide As Object
+    
+    filepath = "C:\Users\AS\Desktop\DS160\p.pptx"
+    ' Initialize PowerPoint
+    Set pptApp = CreateObject("PowerPoint.Application")
+    Set pptPres = pptApp.Presentations.Open(filepath)
+    pptApp.Visible = True
+    
+    ' Loop through slides and check custom names set with Tags
+    For Each slide In pptPres.Slides
+        If slide.Tags("SlideName") <> "" Then
+            MsgBox "Slide " & slide.slideIndex & " is named: " & slide.Tags("SlideName")
+        Else
+            MsgBox "Slide " & slide.slideIndex & " is named: " & slide.Name
+        End If
+    Next slide
+    
+    ' Clean up
+    Set pptApp = Nothing
+    Set pptPres = Nothing
+    Set slide = Nothing
+End Sub
+
