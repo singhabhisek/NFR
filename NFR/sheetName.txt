@@ -1,0 +1,219 @@
+Sub AdjustExecutionTableAndShapes()
+    ' Declare variables
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim slide As Object
+    Dim tbl As Object
+    Dim shape As Object
+    Dim row As Integer
+    Dim rowCount As Integer
+    Dim foundRunid2 As Boolean
+    Dim foundRunid3 As Boolean
+    Dim shape1 As Object
+    Dim shape2 As Object
+    Dim shapeMoveUp As Single
+    
+    ' Constants
+    Dim tag As String
+    tag = "run"
+    shapeMoveUp = 20 ' Amount to move shapes up in points
+    
+    ' Create or get PowerPoint application
+    On Error Resume Next
+    Set pptApp = GetObject(, "PowerPoint.Application")
+    If pptApp Is Nothing Then
+        Set pptApp = CreateObject("PowerPoint.Application")
+    End If
+    On Error GoTo 0
+    
+    ' Make PowerPoint visible
+    pptApp.Visible = True
+    
+    ' Open or create a presentation
+    On Error Resume Next
+    Set pptPres = pptApp.ActivePresentation
+    If pptPres Is Nothing Then
+        Set pptPres = pptApp.Presentations.Add
+    End If
+    On Error GoTo 0
+    
+    ' Find the slide with the specified name
+    For Each slide In pptPres.Slides
+        If Left(slide.Name, Len(tag)) = tag Then
+            Exit For
+        End If
+    Next slide
+    
+    ' Find the table and shapes on the slide
+    If Not slide Is Nothing Then
+        For Each shape In slide.Shapes
+            If shape.Type = msoTable Then
+                If shape.Name = "executionTable" Then
+                    Set tbl = shape.Table
+                End If
+            ElseIf shape.Type = msoShape Then
+                If shape.Name = "s1" Then
+                    Set shape1 = shape
+                ElseIf shape.Name = "s2" Then
+                    Set shape2 = shape
+                End If
+            End If
+        Next shape
+        
+        ' Process the table if found
+        If Not tbl Is Nothing Then
+            rowCount = tbl.Rows.Count
+            foundRunid2 = False
+            foundRunid3 = False
+            
+            ' Check for runid2 and runid3 in the table
+            For row = 1 To rowCount
+                If tbl.Cell(row, 1).Shape.TextFrame.TextRange.Text = "runid2" Then
+                    foundRunid2 = True
+                ElseIf tbl.Cell(row, 1).Shape.TextFrame.TextRange.Text = "runid3" Then
+                    foundRunid3 = True
+                End If
+            Next row
+            
+            ' Delete rows based on the absence of runid2 and runid3
+            If Not foundRunid3 Then
+                tbl.Rows(rowCount).Delete
+                rowCount = rowCount - 1
+            End If
+            If Not foundRunid2 And rowCount > 0 Then
+                tbl.Rows(rowCount).Delete
+            End If
+            
+            ' Move shapes up if rows are deleted
+            If Not (foundRunid2 And foundRunid3) Then
+                If Not shape1 Is Nothing Then
+                    shape1.Top = shape1.Top - shapeMoveUp
+                End If
+                If Not shape2 Is Nothing Then
+                    shape2.Top = shape2.Top - shapeMoveUp
+                End If
+            End If
+        End If
+    End If
+End Sub
+
+
+Sub AddPptSlidesForSheets(pptPres As Object, runid As String, sheetNames() As String)
+    Dim ws As Worksheet
+    Dim sheetName As String
+    Dim slideIndex As Integer
+    Dim slideCount As Integer
+    Dim sheetType As String
+    Dim calcUtilization As Double
+
+    ' Add a blank slide for the runid
+    slideCount = pptPres.Slides.Count
+    pptPres.Slides.Add slideCount + 1, 1 ' 1 is for ppLayoutTitle
+    slideIndex = slideCount + 1
+
+    ' Set the title for the blank slide
+    With pptPres.Slides(slideIndex)
+        .Shapes.Title.TextFrame.TextRange.Text = runid
+        .Shapes.Title.TextFrame.TextRange.ParagraphFormat.Alignment = 2 ' Center alignment
+        .Tags.Add "SheetName", "Blank Slide"
+    End With
+
+    ' Loop through sheet names
+    For Each sheetName In sheetNames
+        ' Check if the sheet exists
+        On Error Resume Next
+        Set ws = ThisWorkbook.Sheets(sheetName)
+        On Error GoTo 0
+
+        If Not ws Is Nothing Then
+            ' Determine if sheet matches runid and contains DT_CPU or DT_MEMORY
+            If ws.Name Like runid & "*DT_CPU*" Then
+                sheetType = "CPU"
+            ElseIf ws.Name Like runid & "*DT_MEMORY*" Then
+                sheetType = "Memory"
+            Else
+                sheetType = ""
+            End If
+
+            If sheetType <> "" Then
+                ' Add a new slide
+                pptPres.Slides.Add slideCount + 1, 12 ' 12 is for ppLayoutText
+                slideIndex = slideCount + 1
+
+                ' Write observations
+                With pptPres.Slides(slideIndex)
+                    ' Set the slide title as the sheet name
+                    .Shapes.Title.TextFrame.TextRange.Text = sheetName
+                    .Tags.Add "SheetName", sheetName
+
+                    ' Add content
+                    If sheetType = "CPU" Then
+                        calcUtilization = CalculateCPUUtilization(ws)
+                        .Shapes(2).TextFrame.TextRange.Text = "CPU Utilization for " & sheetName & " is " & calcUtilization & "%"
+                    ElseIf sheetType = "Memory" Then
+                        calcUtilization = CalculateMemoryUtilization(ws)
+                        .Shapes(2).TextFrame.TextRange.Text = "Memory Utilization for " & sheetName & " is " & calcUtilization & "%"
+                    End If
+                End With
+
+                ' Increment slide count
+                slideCount = slideCount + 1
+            End If
+        End If
+    Next sheetName
+End Sub
+
+Function CalculateCPUUtilization(ws As Worksheet) As Double
+    ' Your logic to calculate CPU utilization
+    ' Placeholder: Return a dummy value
+    CalculateCPUUtilization = WorksheetFunction.Average(ws.Range("A1:A10"))
+End Function
+
+Function CalculateMemoryUtilization(ws As Worksheet) As Double
+    ' Your logic to calculate Memory utilization
+    ' Placeholder: Return a dummy value
+    CalculateMemoryUtilization = WorksheetFunction.Average(ws.Range("B1:B10"))
+End Function
+
+Function GetSheetNamesByRunID(runid As String) As Variant
+    Dim sheetNames() As String
+    Dim ws As Worksheet
+    Dim count As Integer
+    count = 0
+    
+    ' Loop through sheets and filter by runid
+    For Each ws In ThisWorkbook.Sheets
+        If ws.Name Like runid & "*DT_CPU*" Or ws.Name Like runid & "*DT_MEMORY*" Then
+            ReDim Preserve sheetNames(count)
+            sheetNames(count) = ws.Name
+            count = count + 1
+        End If
+    Next ws
+    
+    GetSheetNamesByRunID = sheetNames
+End Function
+
+Sub TestAddPptSlidesForSheets()
+    Dim ppt As Object
+    Dim pptPres As Object
+    Dim runid As String
+    Dim sheetNames As Variant
+
+    ' Initialize PowerPoint and create a new presentation
+    Set ppt = CreateObject("PowerPoint.Application")
+    ppt.Visible = True
+    Set pptPres = ppt.Presentations.Add
+
+    ' Define and process runid values
+    runid = "Run1"
+    sheetNames = GetSheetNamesByRunID(runid)
+    Call AddPptSlidesForSheets(pptPres, runid, sheetNames)
+
+    runid = "Run2"
+    sheetNames = GetSheetNamesByRunID(runid)
+    Call AddPptSlidesForSheets(pptPres, runid, sheetNames)
+
+    runid = "Run3"
+    sheetNames = GetSheetNamesByRunID(runid)
+    Call AddPptSlidesForSheets(pptPres, runid, sheetNames)
+End Sub
