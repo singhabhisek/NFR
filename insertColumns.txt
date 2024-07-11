@@ -1,0 +1,106 @@
+
+
+Sub InsertColumnsAndCalculate()
+    Dim ws As Worksheet
+    Dim slaSheet As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim vlookupValue As Variant
+
+    ' Set the worksheet variables
+    Set ws = ThisWorkbook.Sheets("Sheet1")
+    Set slaSheet = ThisWorkbook.Sheets("SLA")
+
+    ' Get the last row with data in column A
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+
+    ' Shift columns to the right from column B starting from row 7
+    ws.Range("B7:B" & lastRow).Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    ws.Range("B7").Value = "SLA Values"
+
+    ' Perform VLOOKUP from column A against the SLA sheet and write results in column B
+    For i = 8 To lastRow
+        vlookupValue = Application.VLookup(ws.Cells(i, 1).Value, slaSheet.Range("A:C"), 2, False)
+        If Not IsError(vlookupValue) Then
+            ws.Cells(i, 2).Value = vlookupValue
+        Else
+            ws.Cells(i, 2).Value = "N/A" ' or any default value
+        End If
+    Next i
+
+    ' Insert a column next to column F
+    ws.Columns("G").Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    ws.Range("G7").Value = "Difference values"
+
+    ' Calculate the difference between column F and column B
+    For i = 8 To lastRow
+        If IsNumeric(ws.Cells(i, 6).Value) And IsNumeric(ws.Cells(i, 2).Value) Then
+            ws.Cells(i, 7).Value = ws.Cells(i, 6).Value - ws.Cells(i, 2).Value
+        Else
+            ws.Cells(i, 7).Value = "N/A"
+        End If
+    Next i
+End Sub
+
+
+
+Sub InsertColumnsAndCalculate(colB As Integer, rowStart As Integer, colF As Integer, sheetName As String, slaSheetName As String)
+    Dim ws As Worksheet
+    Dim slaSheet As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    Dim vlookupValue As Variant
+
+    ' Set the worksheet variables
+    Set ws = ThisWorkbook.Sheets(sheetName)
+    Set slaSheet = ThisWorkbook.Sheets(slaSheetName)
+
+    ' Get the last row with data in column A
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+
+    ' Shift columns to the right from the specified column and row
+    ws.Range(ws.Cells(rowStart, colB), ws.Cells(lastRow, colB)).Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    ws.Cells(rowStart, colB).Value = "SLA Values"
+
+    ' Perform VLOOKUP from column A against the SLA sheet and write results in the specified column
+    For i = rowStart + 1 To lastRow
+        vlookupValue = Application.VLookup(ws.Cells(i, 1).Value, slaSheet.Range("A:C"), 2, False)
+        If Not IsError(vlookupValue) Then
+            ws.Cells(i, colB).Value = vlookupValue
+        Else
+            ws.Cells(i, colB).Value = "N/A" ' or any default value
+        End If
+    Next i
+
+    ' Insert a column next to the specified column F
+    ws.Columns(colF + 1).Insert Shift:=xlToRight, CopyOrigin:=xlFormatFromLeftOrAbove
+    ws.Cells(rowStart, colF + 1).Value = "Difference values"
+
+    ' Calculate the difference between the specified column F and column B
+    For i = rowStart + 1 To lastRow
+        If IsNumeric(ws.Cells(i, colF).Value) And IsNumeric(ws.Cells(i, colB).Value) Then
+            ws.Cells(i, colF + 1).Value = ws.Cells(i, colF).Value - ws.Cells(i, colB).Value
+        Else
+            ws.Cells(i, colF + 1).Value = "N/A"
+        End If
+    Next i
+End Sub
+
+Sub TestInsertColumnsAndCalculate()
+    Dim colB As Integer
+    Dim rowStart As Integer
+    Dim colF As Integer
+    Dim sheetName As String
+    Dim slaSheetName As String
+
+    ' Define the input parameters
+    colB = 2            ' Column B
+    rowStart = 7        ' Starting row
+    colF = 6            ' Column F
+    sheetName = "Sheet1"
+    slaSheetName = "SLA"
+
+    ' Call the main subroutine with the parameters
+    InsertColumnsAndCalculate colB, rowStart, colF, sheetName, slaSheetName
+End Sub
+
