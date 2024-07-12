@@ -1,3 +1,80 @@
+Function GetTop3TransactionsExceedingSLA() As Variant
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim exceedSLA As Collection
+    Dim cell As Range
+    Dim txnName As String
+    Dim txnTime As Double
+    Dim i As Long, j As Long
+    Dim tempTxn As Variant
+    Dim result(1 To 3) As String
+
+    ' Set the worksheet
+    Set ws = ActiveSheet
+    
+    ' Find the last row with data in column A
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+    
+    ' Initialize the collection to store transactions exceeding SLA
+    Set exceedSLA = New Collection
+    
+    ' Loop through each row to find transactions exceeding SLA (marked in red in column D)
+    For i = 2 To lastRow ' Assuming row 1 has headers
+        If ws.Cells(i, 4).Interior.Color = RGB(255, 0, 0) Then ' Check if cell in column D is red
+            txnName = ws.Cells(i, 1).Value
+            txnTime = ws.Cells(i, 4).Value
+            exceedSLA.Add Array(txnName, txnTime)
+        End If
+    Next i
+    
+    ' Sort the collection by transaction time (descending)
+    For i = 1 To exceedSLA.Count - 1
+        For j = i + 1 To exceedSLA.Count
+            If exceedSLA(i)(1) < exceedSLA(j)(1) Then
+                ' Swap items
+                tempTxn = exceedSLA(i)
+                exceedSLA.Remove i
+                exceedSLA.Add tempTxn, , i
+                
+                tempTime = exceedSLA(j)
+                exceedSLA.Remove j
+                exceedSLA.Add tempTime, , j
+            End If
+        Next j
+    Next i
+    
+    ' Prepare the result array with the top 3 transactions exceeding SLA
+    For i = 1 To Application.WorksheetFunction.Min(3, exceedSLA.Count)
+        result(i) = exceedSLA(i)(0) & " - " & exceedSLA(i)(1)
+    Next i
+    
+    ' Return the result array
+    GetTop3TransactionsExceedingSLA = result
+End Function
+
+
+Sub DisplayTop3TransactionsExceedingSLA()
+    Dim top3Transactions As Variant
+    Dim i As Integer
+    Dim result As String
+
+    ' Call the function to get the top 3 transactions
+    top3Transactions = GetTop3TransactionsExceedingSLA()
+
+    ' Prepare the result string
+    result = "Top 3 Transactions Exceeding SLA:" & vbCrLf
+    For i = LBound(top3Transactions) To UBound(top3Transactions)
+        If Not IsEmpty(top3Transactions(i)) Then
+            result = result & i & ". " & top3Transactions(i) & vbCrLf
+        End If
+    Next i
+
+    ' Display the result in a message box
+    MsgBox result, vbInformation
+End Sub
+
+=====================
+
 
 
 Sub InsertColumnsAndCalculate()
