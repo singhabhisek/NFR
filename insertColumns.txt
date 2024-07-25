@@ -105,6 +105,145 @@ End Sub
 ============================================
 
 
+import openpyxl
+import sqlite3
+from datetime import datetime
+from flask import Flask, request, render_template, jsonify
+
+app = Flask(__name__)
+
+@app.route('/bulk_upload')
+def bulk_upload_page():
+    return render_template('bulk_upload.html')
+
+@app.route('/bulk_upload', methods=['POST'])
+def bulk_upload():
+    if 'file' not in request.files:
+        return 'No file part', 400
+    file = request.files['file']
+    if file.filename == '':
+        return 'No selected file', 400
+
+    try:
+        # Load the uploaded Excel file
+        workbook = openpyxl.load_workbook(file)
+        sheet = workbook.active
+
+        # Define the mapping between Excel columns and database columns
+        column_mapping = {
+            'Defect ID': 'defect_id',
+            'Summary': 'summary',
+            'Description': 'description',
+            'Status': 'status',
+            'Priority': 'priority',
+            'Severity': 'severity',
+            'Owner': 'owner',
+            'Open Date': 'open_date',
+            'Close Date': 'close_date',
+            'Environment': 'environment',
+            'Application Name': 'application_name',
+            'Release Version': 'release_version',
+            'Reported By': 'reported_by',
+            'Reported Date': 'reported_date',
+            'Steps to Reproduce': 'steps_to_reproduce',
+            'Actual Result': 'actual_result',
+            'Expected Result': 'expected_result',
+            'Attachments': 'attachments',
+            'Comments': 'comments',
+            'Iteration': 'iteration',
+            'Resolution': 'resolution'
+        }
+
+        # Define a mapping for severity transformation
+        severity_mapping = {
+            1: 'Critical',
+            2: 'High',
+            3: 'Medium',
+            4: 'Low'
+        }
+
+        # Connect to the SQLite database (or create it if it doesn't exist)
+        conn = sqlite3.connect('your_database.db')
+        cursor = conn.cursor()
+
+        # Create the table (adjust the schema as needed)
+        create_table_query = '''
+        CREATE TABLE IF NOT EXISTS defects (
+            defect_id TEXT PRIMARY KEY,
+            summary TEXT,
+            description TEXT,
+            status TEXT,
+            priority TEXT,
+            severity TEXT,
+            owner TEXT,
+            open_date DATE,
+            close_date DATE,
+            environment TEXT,
+            application_name TEXT,
+            release_version TEXT,
+            reported_by TEXT,
+            reported_date DATE,
+            steps_to_reproduce TEXT,
+            actual_result TEXT,
+            expected_result TEXT,
+            attachments TEXT,
+            comments TEXT,
+            iteration TEXT,
+            resolution TEXT
+        )
+        '''
+        cursor.execute(create_table_query)
+
+        # Get the header row
+        header = [cell.value for cell in next(sheet.iter_rows(min_row=1, max_row=1))]
+
+        # Create a list of indices based on the column mapping
+        indices = {excel_col: header.index(excel_col) for excel_col in column_mapping if excel_col in header}
+
+        # Iterate over the rows in the Excel sheet and insert/update them into the SQLite table
+        for row in sheet.iter_rows(min_row=2, values_only=True):  # Assuming the first row is header
+            # Map the Excel columns to SQL columns and transform the data as needed
+            data = {
+                'defect_id': row[indices['Defect ID']],
+                'summary': row[indices['Summary']],
+                'description': row[indices['Description']],
+                'status': row[indices['Status']],
+                'priority': row[indices['Priority']],
+                'severity': severity_mapping.get(row[indices['Severity']], 'Unknown'),
+                'owner': row[indices['Owner']],
+                'open_date': row[indices['Open Date']].date() if isinstance(row[indices['Open Date']], datetime) else row[indices['Open Date']],
+                'close_date': row[indices['Close Date']].date() if isinstance(row[indices['Close Date']], datetime) else row[indices['Close Date']],
+                'environment': row[indices['Environment']],
+                'application_name': row[indices['Application Name']],
+                'release_version': row[indices['Release Version']],
+                'reported_by': row[indices['Reported By']],
+                'reported_date': row[indices['Reported Date']].date() if isinstance(row[indices['Reported Date']], datetime) else row[indices['Reported Date']],
+                'steps_to_reproduce': row[indices['Steps to Reproduce']],
+                'actual_result': row[indices['Actual Result']],
+                'expected_result': row[indices['Expected Result']],
+                'attachments': row[indices['Attachments']],
+                'comments': row[indices['Comments']],
+                'iteration': row[indices['Iteration']],
+                'resolution': row[indices['Resolution']]
+            }
+            
+            # Prepare the insert or replace query
+            insert_query = '''
+            INSERT OR REPLACE INTO defects (defect_id, summary, description, status, priority, severity, owner, open_date, close_date, environment, application_name, release_version, reported_by, reported_date, steps_to_reproduce, actual_result, expected_result, attachments, comments, iteration, resolution)
+            VALUES (:defect_id, :summary, :description, :status, :priority, :severity, :owner, :open_date, :close_date, :environment, :application_name, :release_version, :reported_by, :reported_date, :steps_to_reproduce, :actual_result, :expected_result, :attachments, :comments, :iteration, :resolution)
+            '''
+            cursor.execute(insert_query, data)
+
+        # Commit the changes and close the connection
+        conn.commit()
+        conn.close()
+        return '', 204
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+===============================================
 
 
 
