@@ -1,3 +1,119 @@
+Option Explicit
+
+' Declare a public dynamic array
+Public occurrences() As String
+
+
+Sub CaptureOccurrence(newOccurrence As String)
+    Dim currentSize As Long
+
+    ' Check if the array is initialized
+    If IsArrayInitialized(occurrences) Then
+        currentSize = UBound(occurrences) + 1
+    Else
+        currentSize = 0
+    End If
+
+    ' Resize the array to hold the new occurrence
+    ReDim Preserve occurrences(currentSize)
+
+    ' Add the new occurrence to the array
+    occurrences(currentSize) = newOccurrence
+End Sub
+
+Sub PrintOccurrences()
+    Dim i As Long
+    Dim output As String
+
+    ' Check if the array is initialized
+    If Not IsArrayInitialized(occurrences) Then
+        MsgBox "No occurrences to display.", vbInformation
+        Exit Sub
+    End If
+
+    ' Build the output string with new line delimiters
+    For i = LBound(occurrences) To UBound(occurrences)
+        output = output & occurrences(i) & vbCrLf
+    Next i
+
+    ' Display the output string
+    MsgBox output, vbInformation, "Occurrences"
+End Sub
+
+
+Sub ResetOccurrences()
+    ' Clear and deallocate the public array
+    Erase occurrences
+End Sub
+
+Function IsArrayInitialized(arr As Variant) As Boolean
+    On Error Resume Next
+    IsArrayInitialized = IsArray(arr) And Not IsError(LBound(arr)) And LBound(arr) <= UBound(arr)
+    On Error GoTo 0
+End Function
+
+Sub TestCapturePrintAndReset()
+    ' Capture some occurrences
+    CaptureOccurrence "First occurrence"
+    CaptureOccurrence "Second occurrence"
+    CaptureOccurrence "Third occurrence"
+
+    ' Print the occurrences
+    PrintOccurrences
+
+    ' Reset the occurrences
+    ResetOccurrences
+
+    ' Print the occurrences again to confirm reset
+    PrintOccurrences
+End Sub
+
+
+Sub AdjustedDateTime()
+    Dim startDateTime As Date
+    Dim endDateTime As Date
+    Dim steadyStartInSeconds As Integer
+    Dim steadyEndInSeconds As Integer
+    Dim newDateTime As Date
+    Dim formattedDateTime As String
+    
+    ' Define the date-times
+    startDateTime = "07/24/2024 11:10:41"
+    endDateTime = "07/24/2024 11:15:00"
+    
+    ' Define the steady start and end times in seconds
+    steadyStartInSeconds = 0 ' Assuming this is not used in the calculation
+    steadyEndInSeconds = 300 ' 300 seconds equals 5 minutes
+    
+    ' Add steadyEndInSeconds to startDateTime
+    newDateTime = DateAdd("s", steadyEndInSeconds, startDateTime)
+    
+    ' Compare newDateTime with endDateTime and use the earlier one
+    If newDateTime > endDateTime Then
+        newDateTime = endDateTime
+    End If
+    
+    ' Format the final date-time in 24-hour format
+    formattedDateTime = Format(newDateTime, "MM/DD/YYYY HH:MM:SS")
+    
+    ' Display the formatted date-time
+    MsgBox "The adjusted date-time is: " & formattedDateTime
+End Sub
+
+
+
+============================================
+
+
+
+
+
+
+
+
+
+
+
 Function GetTop3TransactionsExceedingSLA() As Variant
     Dim ws As Worksheet
     Dim lastRow As Long
