@@ -1,3 +1,45 @@
+Function ConvertToSeconds(timeString As String) As Long
+    Dim timeParts() As String
+    Dim totalSeconds As Long
+    Dim i As Integer
+    Dim timePart As String
+    Dim value As Long
+    Dim unit As String
+    
+    ' Split the input string by ":"
+    timeParts = Split(timeString, ":")
+    
+    ' Initialize total seconds to 0
+    totalSeconds = 0
+    
+    ' Loop through each part of the time string
+    For i = LBound(timeParts) To UBound(timeParts)
+        timePart = timeParts(i)
+        
+        ' Identify the unit (last character) and value
+        unit = Right(timePart, 1)
+        value = CLng(Left(timePart, Len(timePart) - 1))
+        
+        ' Convert each part to seconds
+        Select Case unit
+            Case "s"
+                totalSeconds = totalSeconds + value
+            Case "m"
+                totalSeconds = totalSeconds + value * 60
+            Case "h"
+                totalSeconds = totalSeconds + value * 3600
+            Case "d"
+                totalSeconds = totalSeconds + value * 86400
+        End Select
+    Next i
+    
+    ' Return the total seconds
+    ConvertToSeconds = totalSeconds
+End Function
+
+
+
+
 Option Explicit
 
 ' Declare a public dynamic array
