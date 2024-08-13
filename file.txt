@@ -1,0 +1,120 @@
+import sqlite3
+
+def init_db():
+    conn = sqlite3.connect('app.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS UserAccess (
+        userid INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        access TEXT NOT NULL,  -- 'user' or 'admin'
+        activeStatus TEXT NOT NULL  -- 'active' or 'inactive'
+    )
+    ''')
+    conn.commit()
+    conn.close()
+
+# Initialize the database
+init_db()
+
+
+from flask import Flask, render_template, session, redirect, url_for
+import sqlite3
+import os
+
+app = Flask(__name__)
+app.secret_key = 'you-will-never-guess'  # Secure this in production
+
+def get_db_connection():
+    conn = sqlite3.connect('app.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def get_user_access(username):
+    conn = get_db_connection()
+    user = conn.execute('SELECT * FROM UserAccess WHERE LOWER(username) = LOWER(?)', (username.lower(),)).fetchone()
+    conn.close()
+    return user
+
+
+@app.route('/')
+def index():
+    if 'username' in session:
+        user = get_user_access(session['username'])
+        if user:
+            return render_template('index.html', user=user)
+    return redirect(url_for('index'))
+
+@app.route('/upload')
+def upload():
+    if 'username' in session:
+        user = get_user_access(session['username'])
+        if user and user['access'] == 'admin':
+            return render_template('upload.html', user=user)
+        return redirect(url_for('index'))
+    return redirect(url_for('index'))
+
+
+
+@app.route('/upload')
+def upload():
+    if 'username' in session:
+        user = get_user_access(session['username'])
+        if user and user['access'] == 'admin':
+            return render_template('upload.html', user=user)
+    return render_template('index.html')  # Show homepage for non-admins
+
+
+
+
+@app.route('/compare')
+def compare():
+    if 'username' in session:
+        user = get_user_access(session['username'])
+        if user:
+            return render_template('compare.html', user=user)
+    return redirect(url_for('index'))
+
+@app.before_request
+def get_logged_in_username():
+    if 'username' not in session:
+        username = os.getlogin()
+        user = get_user_access(username)
+        if user and user['activeStatus'] == 'active':
+            session['username'] = username
+        else:
+            session['username'] = None
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+-------base.html--------------
+
+<!doctype html>
+<html>
+<head>
+    <title>App</title>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="{{ url_for('index') }}">Home</a></li>
+            {% if user and user['access'] == 'admin' %}
+                <li><a href="{{ url_for('upload') }}">Upload</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('compare') }}">Compare</a></li>
+        </ul>
+    </nav>
+    <div>
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
+
+---------index.html---------
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Welcome, {{ user['username'] }}!</h1>
+{% endblock %}
+
