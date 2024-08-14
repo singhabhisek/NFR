@@ -1,0 +1,2736 @@
+index.html
+
+
+{% extends "base.html" %} {% block title %}Dashboard{% endblock %}
+<meta charset="UTF-8" />
+<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+<title>NFR Portal</title>
+
+{% block content %}
+<style>
+    div.dt-buttons {
+        float: right;
+        margin: 0 5px;
+    }
+</style>
+
+<style>
+    /* Custom CSS for purple variant */
+    .card-header, .modal-header, .btn-primary, .custom-button {
+        background-color: #6f42c1; /* Purple background */
+        color: #fff; /* White text color */
+    }
+
+    .btn-secondary {
+        background-color: #6c757d; /* Dark gray background */
+        color: #fff; /* White text color */
+    }
+
+    .card {
+        border: 1px solid #6f42c1; /* Purple border */
+    }
+
+    .table-bordered th, .table-bordered td {
+        border-color: #6f42c1; /* Purple border for table */
+    }
+
+    .modal-content {
+        border: 1px solid #6f42c1; /* Purple border for modals */
+    }
+
+    /* Custom CSS for table */
+    .table-bordered {
+        border-color: #6f42c1; /* Purple border */
+    }
+
+    .table-bordered th, .table-bordered td {
+        border-color: #6f42c1; /* Purple border */
+    }
+
+    .table thead th {
+        background-color: #9c6cc1; /* Light purple for header row */
+        color: #fff; /* White text color */
+    }
+
+    .table tbody tr:nth-child(odd) {
+        background-color: #f3e5f5; /* Lightest purple for odd rows */
+    }
+
+    .table tbody tr:hover {
+        background-color: #e2d8e6; /* Gray on hovering */
+    }
+
+</style>
+<style>
+    /* Custom CSS for sidebar */
+    .sidebar {
+        background-color: #9c6cc1; /* Light purple background */
+        color: #fff; /* White text color */
+        padding-top: 20px;
+        min-height: 100vh; /* Full height of viewport */
+    }
+
+    .sidebar a {
+        color: #fff; /* White text color for links */
+    }
+
+    .sidebar a:hover {
+        color: #f8f9fa; /* Light gray for link hover */
+        text-decoration: none; /* Remove underline */
+    }
+
+    .sidebar .active {
+        background-color: #6f42c1; /* Purple background for active link */
+    }
+</style>
+  <style>
+
+        /* Custom styles for the chat popup and icon */
+        #nfrPopup {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            z-index: 1000;
+            background-color: #fff;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            width: 300px;
+            min-height: 200px; /* Adjusted minimum height */
+            padding: 15px;
+        }
+
+        #nfrPopup.show {
+            display: block;
+        }
+
+        #nfrPopup .close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            cursor: pointer;
+        }
+
+        #nfrToggleBtn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1001;
+            width: 50px;
+            height: 50px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            font-size: 20px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        #nfrToggleBtn:hover {
+            background-color: #0056b3;
+        }
+
+        #nfrToggleBtn:focus {
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        #nfrContent {
+            margin-top: 10px;
+            height: calc(100% - 45px); /* Adjusted content height */
+            overflow-y: auto; /* Enable scroll if content exceeds height */
+        }
+
+        #nfrContent form {
+            margin-bottom: 0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+    </style>
+<!--    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.0/xlsx.full.min.js"></script>-->
+
+<div class="container1">
+    <div class="card card-header">
+        Search Criteria
+    </div>
+
+    <form class="card card-body" id="nfr-form">
+        <div class="form-row form-inline justify-content-center">
+            <div class="col-md-3 d-flex justify-content-end">
+            <div class="form-floating" style="width: 100%;">
+                <select class="select2 form-control form-control-sm"  id="application_name" data-placeholder="Select Application"  aria-label="Floating label select example" name="application_name" style="width: 80%;">
+                    <option value="">Select Application</option>
+                    {% for app in apps %}
+                    <option value="{{ app['applicationName'] }}">{{ app['applicationName'] }}</option>
+                    {% endfor %}
+                </select>
+                    <label for="application_name">Application Name:</label>&emsp;
+                </div>
+            </div>
+            <div class="col-md-3 d-flex justify-content-center">
+            <div class="form-floating" style="width: 100%;">
+                    <select class="select2 form-control" data-placeholder="Select Release" id="release_id" name="release_id" style="width: 80%;">
+                        <option value="">Release Name</option>
+                    </select>
+                    <label for="release_id">Select Release:</label>&emsp;
+                </div>
+            </div>
+            <div class="col-md-3 d-flex justify-content-start">
+                <div class="form-floating" style="width: 100%;">
+                    <input class="form-control" id="transaction_name" name="transaction_name" style="width:90%; height: 36px; font-size: 1rem;" type="text" />
+                    <label for="transaction_name">Type Transaction Name:</label>&emsp;
+                </div>
+            </div>
+        </div>
+        <br />
+        <div class="row justify-content-center">
+            <div class="col">
+                <div class="row">
+                    <div class="col text-center">
+                        <button class="btn btn-primary mr-2" id="search-records" type="button">Search Records</button>
+                        <button class="btn btn-secondary mr-2" id="reset-form" type="button">Clear Records</button>
+                    </div>
+<!--                    <div class="col-auto text-right">-->
+<!--                        <a href="#" id="recent-searches-link">Recent Searches</a>-->
+<!--                    </div>-->
+                </div>
+            </div>
+        </div>
+        <div>
+            <div class="col-auto text-right">
+                        <a href="#" id="recent-searches-link">Recent Searches</a>
+                    </div>
+        </div>
+    </form>
+    <div id="alerts-container"></div>
+    <div class="card mt-3">
+        <div class="card-header">
+            Search Results
+        </div>
+        <div class="card-body" style="min-height: 500px; overflow-y: auto;">
+            <!-- Loader -->
+            <div class="loader"></div>
+            <table class="table table-bordered" id="records-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Application</th>
+                        <th>Release</th>
+                        <th>Scenario</th>
+                        <th>Transaction</th>
+                        <th>SLA</th>
+                        <th>TPS</th>
+ {% if user and user['role'] == 'admin' %}
+<th>Actions</th>
+ {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Records will be dynamically loaded here -->
+                </tbody>
+            </table>
+            <!-- Edit Modal -->
+            <div aria-hidden="true" aria-labelledby="editModalLabel" class="modal fade" id="editModal" role="dialog" tabindex="-1">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editModalLabel">Edit Record</h5>
+                            <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form id="edit-form">
+                            <div class="modal-body">
+                                <input id="edit-id" name="Id" type="hidden" />
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="edit-application">Application</label>
+                                        <input class="form-control" id="edit-application" name="applicationName" readonly required type="text" />
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="edit-release">Release</label>
+                                        <input class="form-control" id="edit-release" name="releaseID" readonly required type="text" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="edit-scenario">Scenario</label>
+                                        <input class="form-control" id="edit-scenario" name="businessScenario" required type="text" />
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="edit-transaction">Transaction</label>
+                                        <input class="form-control" id="edit-transaction" name="transactionName" required type="text" />
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group col">
+                                        <label for="edit-sla">SLA</label>
+                                        <input class="form-control" id="edit-sla" name="SLA" required type="text" />
+                                        <small class="form-text text-danger" id="sla-error"></small>
+                                    </div>
+                                    <div class="form-group col">
+                                        <label for="edit-tps">TPS</label>
+                                        <input class="form-control" id="edit-tps" name="TPS" required type="text" />
+                                        <small class="form-text text-danger" id="tps-error"></small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn btn-secondary" data-dismiss="modal" type="button">Close</button>
+                                <button class="btn btn-primary" type="submit">Save changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- Delete Confirmation Modal -->
+            <div aria-hidden="true" aria-labelledby="deleteModalLabel" class="modal fade" id="deleteModal" role="dialog" tabindex="-1">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                            <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to delete this record?
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" data-dismiss="modal" type="button">Close</button>
+                            <button class="btn btn-danger" id="confirm-delete" type="button">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div aria-hidden="true" aria-labelledby="recentSearchesModalLabel" class="modal fade" id="recentSearchesModal" role="dialog" tabindex="-1">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="recentSearchesModalLabel">Recent Searches</h5>
+                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul id="recent-searches-list">
+                    <!-- Recent searches will be populated here -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal" type="button">Close</button>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+<!-- NFR Interaction Popup -->
+<!--    <div id="nfrPopup" class="shadow">-->
+<!--        <button id="nfrCloseBtn" type="button" class="close">&times;</button>-->
+<!--        <div id="nfrContent">-->
+<!--            &lt;!&ndash; Content will be loaded dynamically &ndash;&gt;-->
+<!--        </div>-->
+<!--    </div>-->
+
+    <!-- NFR Toggle Button -->
+<!--    <button id="nfrToggleBtn">NFR</button>-->
+
+<script>
+        $(document).ready(function() {
+            $('.select2').select2();
+
+            // Intercept form submission
+            $('#nfr-form').submit(function(event) {
+                // Prevent default form submission behavior
+                event.preventDefault();
+
+                // Perform custom form submission action here
+                searchRecords();
+            });
+
+
+            // Load releases based on application
+            $('#application_name').change(function() {
+                var appName = $(this).val();
+                $.ajax({
+                    url: '/get_releases',
+                    type: 'POST',
+                    data: { applicationName: appName },
+                    success: function(data) {
+                        var releaseDropdown = $('#release_id');
+                        releaseDropdown.empty().append('<option value="">Select Release</option>');
+                        data.forEach(function(release) {
+                            releaseDropdown.append('<option value="' + release + '">' + release + '</option>');
+                        });
+                    }
+                });
+            });
+
+            // Fuzzy search for transactions
+            $("#transaction_name").autocomplete({
+                source: function(request, response) {
+                    $.ajax({
+                        url: '/suggest_transactions',
+                        type: 'POST',
+                        data: {
+                            term: request.term,
+                            applicationName: $('#application_name').val()
+                        },
+                        success: function(data) {
+                            const matches = fuzzySearch(request.term, data);
+                            response(matches.map(match => ({
+                                label: match,
+                                value: match
+                            })));
+                        }
+                    });
+                },
+                minLength: 3,
+                open: function(event, ui) {
+                    $(this).autocomplete("widget").css({
+                        "background-color": "lightgray",
+                        "color": "black"
+                    });
+                    $(this).autocomplete("widget").addClass("custom-autocomplete");
+                    // Match the width of the input field
+                    var $input = $(this);
+                    var $autocomplete = $input.autocomplete("widget");
+                    // Use a slight delay to ensure positioning is applied correctly
+            setTimeout(function() {
+                $autocomplete.width($input.outerWidth());
+                $autocomplete.position({
+                    my: "left top",
+                    at: "left bottom",
+                    of: $input
+                });
+                    // Remove ARIA live region after opening autocomplete
+                removeAriaLiveRegion();
+            }, 50);
+                },
+                messages: {
+                    noResults: '',
+                    results: function() {}
+                },
+                select: function(event, ui) {
+                    // Set the input value and close the autocomplete
+                    $(this).val(ui.item.value);
+                    // Remove ARIA live region after opening autocomplete
+                    removeAriaLiveRegion();
+                    return false; // Prevent the default behavior
+                }
+            });
+
+            // Function to remove ARIA live region
+            function removeAriaLiveRegion() {
+                $('div[role="status"], div[role="alert"]').remove();
+            }
+            // Initialize DataTable
+            var table = $('#records-table').DataTable({
+                searching: true,        // Enable search box
+                paging: true,           // Enable pagination
+                pageLength: 10,         // Set default page size
+                lengthChange: true,     // Enable changing page size
+                ordering: true,         // Enable column sorting
+                info: true,             // Show table info
+                autoWidth: false,       // Disable automatic column width calculation
+                responsive: true,       // Make table responsive
+                dom: 'Blfrtip', // Include buttons for export
+<!--                buttons: [-->
+<!--                    { extend: 'excel', className: 'btn-secondary', text:'Export to Excel' }-->
+<!--                ],-->
+                buttons: [
+                    {
+                        text: 'Export to Excel',
+                        action: function ( e, dt, node, config ) {
+<!--                            exportToExcel();-->
+
+                        },attr: {
+                    id: 'export-excel' // Add ID attribute to the button
+                },
+                className: 'btn btn-primary custom-button' // Button styling
+                    }
+                ],
+                columnDefs: [
+                   {
+                       targets: [0],
+                       visible: false
+                   },
+                    { orderable: false, targets: [7] } // Disable ordering on action buttons column
+                ]
+            });
+
+            // Custom styling for the button
+$('.custom-button').css({
+    'background-color': 'blue',    // Set background color to green
+    'color': 'white'                 // Set text color (foreground color) to blue
+});
+                var userAccessLevel = "{{ user['role'] }}"; // Pass the access level from Flask to JavaScript
+
+            function exportToExcel() {
+                // Create a new workbook and worksheet
+                var wb = XLSX.utils.book_new();
+                var ws_data = [];
+
+                // Get table headers
+                var headers = $('#example thead th').map(function() {
+                    return $(this).text().trim();
+                }).get();
+                ws_data.push(headers);
+
+                // Get table data
+                $('#example tbody tr').each(function() {
+                    var rowData = [];
+                    $(this).find('td').each(function() {
+                        rowData.push($(this).text().trim());
+                    });
+                    ws_data.push(rowData);
+                });
+
+                // Convert data to worksheet and append to workbook
+                var ws = XLSX.utils.aoa_to_sheet(ws_data);
+                XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+                // Write workbook to file
+                XLSX.writeFile(wb, 'export.xlsx');
+            }
+
+            // Search records
+            $('#search-records').click(function() {
+               // Show loader when search button is clicked
+               $('.loader').show();
+               // Validate form inputs
+                var applicationName = $('#application_name').val();
+                var releaseID = $('#release_id').val();
+                var transactionName = $('#transaction_name').val();
+
+
+            if (!applicationName) {
+                showAlert('danger', 'Application name is required.');
+                return;
+            }
+            if (!releaseID && !transactionName) {
+                showAlert('danger', 'Either release ID or transaction name is required.');
+                return;
+            }
+
+
+                // Save search criteria in cookie'
+                var formData = {
+                   release_id: releaseID,
+                   application_name: applicationName,
+                   transaction_name: transactionName
+               };
+               $.ajax({
+                   type: 'POST',
+                   url: '/save_search/main_search', // Dynamic cookie name for index page
+                   contentType: 'application/json',
+                   data: JSON.stringify(formData),
+                   success: function(response) {
+                       console.log('Search saved successfully.');
+                       // Handle success if needed
+                   },
+                   error: function(xhr, status, error) {
+                       console.error('Error saving search:', error);
+                       // Handle error if needed
+                   }
+               });
+
+                $.ajax({
+                    url: '/search_records',
+                    type: 'POST',
+                    data: $('#nfr-form').serialize(),
+                    success: function(data) {
+                        table.clear().draw();
+                        if (data.length > 0) {
+                            data.forEach(function(record) {
+                                 var actionButtons = '';
+
+                                // Conditionally add action buttons based on user access level
+                                if (userAccessLevel === 'admin') {
+                                    actionButtons =
+                                        '<button class="btn btn-primary edit-btn" data-id="' + record.Id + '" title="Edit"> <i class="bi bi-pencil-fill"></i></button>' +
+                                        '<button class="btn btn-danger delete-btn" data-id="' + record.Id + '" title="Delete"> <i class="bi bi-trash"></i></button>';
+                                }
+                                table.row.add([
+                                    record.Id,
+                                    record.applicationName,
+                                    record.releaseID,
+                                    record.businessScenario,
+                                    record.transactionName,
+                                    record.SLA,
+                                    record.TPS,
+                                    actionButtons
+
+                                ]).draw();
+                                table.column(0).visible(false);
+
+                                // Conditionally set the visibility of the Actions column
+                                if (userAccessLevel === 'admin') {
+                                    table.column(-1).visible(true); // Show the last column if user is admin
+                                } else {
+                                    table.column(-1).visible(false); // Hide the last column if user is not admin
+                                }
+
+                            });
+                        } else {
+                            table.draw();
+                            table.column(0).visible(false);
+                        }
+                    },
+                   complete: function() {
+                       // Hide loader when request is complete
+                       $('.loader').hide();
+                   }
+                });
+            });
+
+            // Reset form
+            $('#reset-form').click(function() {
+                $('#nfr-form')[0].reset();
+                $('.select2').val('').trigger('change');
+                table.clear().draw(); // Clear the DataTable
+                $('#validation-error').hide(); // Hide validation error
+
+            });
+
+            // Edit button click
+            $('#records-table tbody').on('click', '.edit-btn', function() {
+                var recordId = $(this).data('id');
+                $.ajax({
+                    url: '/get_record',
+                    type: 'POST',
+                    data: { Id: recordId },
+                    success: function(data) {
+                        var record = data;
+                        $('#edit-id').val(record.Id);
+                        $('#edit-application').val(record.applicationName);
+                        $('#edit-release').val(record.releaseID);
+                        $('#edit-scenario').val(record.businessScenario);
+                        $('#edit-transaction').val(record.transactionName);
+                        $('#edit-sla').val(record.SLA);
+                        $('#edit-tps').val(record.TPS);
+                        $('#editModal').modal('show');
+                    }
+                });
+            });
+
+            // Save changes in edit modal
+            $('#edit-form').submit(function(event) {
+                event.preventDefault();
+
+                var sla = $('#edit-sla').val();
+                var tps = $('#edit-tps').val();
+                var slaError = $('#sla-error');
+                var tpsError = $('#tps-error');
+                var valid = true;
+
+                slaError.text('');
+                tpsError.text('');
+
+                if (isNaN(sla) || parseFloat(sla) <= 0) {
+                    slaError.text('SLA must be a positive number.');
+                    valid = false;
+                }
+
+                if (isNaN(tps) || parseFloat(tps) <= 0) {
+                    tpsError.text('TPS must be a positive number.');
+                    valid = false;
+                }
+
+                if (!valid) {
+                    return;
+                }
+                $.ajax({
+                    url: '/update_record',
+                    type: 'POST',
+                    data: $('#edit-form').serialize(),
+                    success: function(data) {
+                        if (data.success) {
+                            // Show success alert
+                            showAlert('success', 'Record updated successfully.');
+                            // Fetch the updated record
+                            $.ajax({
+                                url: '/get_record',
+                                type: 'POST',
+                                data: { Id: $('#edit-id').val() },
+                                success: function(recordData) {
+                                    // Update the corresponding row in the data table
+                                    var row = table.row(function(idx, data, node) {
+                                        return data[0] === recordData.Id; // Find the row by record ID
+                                    });
+                                    if (row.any()) {
+                                        row.data([
+                                            recordData.Id,
+                                            recordData.applicationName,
+                                            recordData.releaseID,
+                                            recordData.businessScenario,
+                                            recordData.transactionName,
+                                            recordData.SLA,
+                                            recordData.TPS,
+                                            '<button class="btn btn-primary edit-btn" data-id="' + recordData.Id + '" title="Edit"><i class="fa fa-edit"></i> </button>' +
+                                            '<button class="btn btn-danger delete-btn" data-id="' + recordData.Id + '" title="Delete"><i class="fa fa-trash-alt"></i> </button>'
+                                        ]).draw();
+                                    }
+                                    $('#editModal').modal('hide');
+                                }
+                            });
+                        } else {
+                            // Show error alert
+                            showAlert('danger', 'Failed to update record.');
+                        }
+                    },
+                    error: function() {
+                        // Show error alert
+                        showAlert('danger', 'An error occurred while updating the record.');
+                    }
+                });
+            });
+
+            // Delete button click
+            $('#records-table tbody').on('click', '.delete-btn', function() {
+                var recordId = $(this).data('id');
+                $('#confirm-delete').data('id', recordId);
+                $('#deleteModal').modal('show');
+            });
+
+            // Confirm deletion
+            $('#confirm-delete').click(function() {
+                var recordId = $(this).data('id');
+                $.ajax({
+                    url: '/delete_record',
+                    type: 'POST',
+                    data: { Id: recordId },
+                    success: function(data) {
+                        if (data.success) {
+                            // Remove the row from the data table
+
+                            var row = table.row(function(idx, data, node) {
+                                return data[0] === recordId; // Find the row by record ID
+                            });
+                            if (row.any()) {
+                                row.remove().draw();
+                            }
+                            $('#deleteModal').modal('hide');
+                            // Show success alert
+                            showAlert('success', 'Record deleted successfully.');
+                        } else {
+                            // Show error alert
+                            showAlert('danger', 'Failed to delete record.');
+                        }
+                    },
+                    error: function() {
+                        // Show error alert
+                        showAlert('danger', 'An error occurred while deleting the record.');
+                    }
+                });
+            });
+
+            // Basic fuzzy search function
+            function fuzzySearch(term, arr) {
+                const maxDistance = Math.ceil(term.length / 2);
+                return arr.filter(item => {
+                    const lcs = longestCommonSubsequence(term.toLowerCase(), item.toLowerCase());
+                    return lcs >= term.length - maxDistance;
+                });
+            }
+
+            function longestCommonSubsequence(s1, s2) {
+                const m = s1.length, n = s2.length;
+                const dp = Array(m + 1).fill().map(() => Array(n + 1).fill(0));
+                for (let i = 1; i <= m; i++) {
+                    for (let j = 1; j <= n; j++) {
+                        if (s1[i - 1] === s2[j - 1]) {
+                            dp[i][j] = dp[i - 1][j - 1] + 1;
+                        } else {
+                            dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                        }
+                    }
+                }
+                return dp[m][n];
+            }
+
+            // Show modal and load recent searches
+           $('#recent-searches-link').click(function(event) {
+               event.preventDefault();
+               $('#recentSearchesModal').modal('show');
+               loadRecentSearches();
+           });
+
+           // Handle recent search click
+           $(document).on('click', '.recent-search-link', function(event) {
+               event.preventDefault();
+               var searchCriteria = $(this).data('search');
+               $('#application_name').val(searchCriteria.application_name).trigger('change');
+               // Set a timeout to ensure the release_id is updated after application_name change
+               setTimeout(function() {
+                   $('#release_id').val(searchCriteria.release_id).trigger('change');
+               }, 1000); // Adjust the timeout as necessary
+               if (searchCriteria.transaction_name === 'None') {
+                   $('#transaction_name').val('');
+               } else {
+                   $('#transaction_name').val(searchCriteria.transaction_name);
+               }
+               $('#recentSearchesModal').modal('hide');
+           });
+
+           function loadRecentSearches() {
+               // Load recent searches from the cookie
+               $.get('/recent_searches/main_search', function(data) {
+                   var recentSearchesList = $('#recent-searches-list');
+                   recentSearchesList.empty();
+                   if (data.length > 0) {
+                       data.forEach(function(search) {
+                           var listItem = `<li><a href="#" class="recent-search-link" data-search='${JSON.stringify(search)}'>${search.application_name} - ${search.release_id} - ${search.transaction_name}</a></li>`;
+                           recentSearchesList.append(listItem);
+                       });
+                   } else {
+                       recentSearchesList.append('<li>No recent searches.</li>');
+                   }
+               });
+           }
+
+            // Function to display alert
+            function showAlert(type, message) {
+                var alertElement = $('<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                                        message +
+                                        '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                                            '<span aria-hidden="true">&times;</span>' +
+                                        '</button>' +
+                                    '</div>');
+                $('#alerts-container').append(alertElement);
+                setTimeout(function() {
+                    alertElement.alert('close');
+                }, 5000);
+            }
+            // Export to Excel button click event handler
+            $('#export-excel').on('click', function() {
+                // Create a new workbook and worksheet
+                var wb = XLSX.utils.book_new();
+                var ws_data = [];
+
+                // Get table headers and determine which columns to exclude
+                var headers = $('#records-table th');
+                var headerRow = [];
+                var excludeIndices = [];
+
+                headers.each(function(index) {
+                    var headerText = $(this).text().trim();
+                    if (headerText === 'ID' || headerText === 'Actions') {
+                        excludeIndices.push(index); // Collect indices to exclude
+                    } else {
+                        headerRow.push({ v: headerText, s: { font: { bold: true } } }); // Bold header text
+                    }
+                });
+                ws_data.push(headerRow);
+
+                // Get table rows and exclude the specified columns
+                $('#records-table tbody tr').each(function() {
+                    var rowData = [];
+                    $(this).find('td').each(function(index) {
+                        if (!excludeIndices.includes(index)) {
+                            rowData.push($(this).text().trim());
+                        }
+                    });
+                    ws_data.push(rowData);
+                });
+
+                // Convert the data to worksheet and append to the workbook
+                var ws = XLSX.utils.aoa_to_sheet(ws_data);
+                XLSX.utils.book_append_sheet(wb, ws, 'Records');
+
+                // Write the workbook to a file
+                XLSX.writeFile(wb, 'Records.xlsx');
+            });
+
+            // Toggle NFR popup visibility
+            $('#nfrToggleBtn').click(function () {
+                $('#nfrPopup').toggleClass('show');
+                loadNFRInput();  // Load initial content (NFR input) when popup is opened
+            });
+
+            // Close NFR popup
+            $('#nfrCloseBtn').click(function () {
+                $('#nfrPopup').removeClass('show');
+            });
+
+            // Load NFR input content
+            function loadNFRInput() {
+                $.ajax({
+                    url: '/input_nfr',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ prompt_index: 0 }),
+                    success: function (data) {
+                        $('#nfrContent').html(data.prompt);
+                    },
+                    error: function () {
+                        alert('Error loading NFR input');
+                    }
+                });
+            }
+
+            // Handle form submission in NFR input
+            $(document).on('submit', '#nfrInputForm', function (event) {
+                event.preventDefault();
+                var formData = $(this).serializeArray();
+                $.ajax({
+                    url: '/input_nfr',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        prompt_index: formData.length,
+                        application_name: formData[0].value,
+                        release_id: formData[1].value,
+                        business_scenario: formData[2].value,
+                        transaction_name: formData[3].value,
+                        sla: formData[4].value,
+                        tps: formData[5].value,
+                        comments: formData[6].value
+                    }),
+                    success: function (data) {
+                        if (data.prompt) {
+                            $('#nfrContent').html(data.prompt);
+                        } else {
+                            alert('NFR Input Successful');
+                            $('#nfrPopup').removeClass('show');
+                        }
+                    },
+                    error: function () {
+                        alert('Error submitting NFR input');
+                    }
+                });
+            });
+
+            // Load NFR extraction content
+            function loadNFRExtraction() {
+                $.ajax({
+                    url: '/extract_nfr',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ prompt_index: 0 }),
+                    success: function (data) {
+                        $('#nfrContent').html(data.prompt);
+                    },
+                    error: function () {
+                        alert('Error loading NFR extraction');
+                    }
+                });
+            }
+
+            // Handle form submission in NFR extraction
+            $(document).on('submit', '#nfrExtractionForm', function (event) {
+                event.preventDefault();
+                var formData = $(this).serializeArray();
+                $.ajax({
+                    url: '/extract_nfr',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        prompt_index: formData.length,
+                        application_name: formData[0].value,
+                        release_id: formData[1].value,
+                        transaction_name: formData[2].value
+                    }),
+                    success: function (data) {
+                        if (data.prompt) {
+                            $('#nfrContent').html(data.prompt);
+                        } else if (data.confirm) {
+                            if (confirm(data.confirm_message)) {
+                                // Proceed with closest match
+                                $.ajax({
+                                    url: '/extract_nfr',
+                                    type: 'POST',
+                                    contentType: 'application/json',
+                                    data: JSON.stringify({
+                                        prompt_index: formData.length,
+                                        application_name: data.closest_match,
+                                        release_id: formData[1].value,
+                                        transaction_name: formData[2].value
+                                    }),
+                                    success: function (data) {
+                                        $('#nfrContent').html(data.prompt);
+                                    },
+                                    error: function () {
+                                        alert('Error loading NFR extraction');
+                                    }
+                                });
+                            } else {
+                                loadNFRExtraction();  // Reload extraction prompt
+                            }
+                        } else {
+                            window.location.href = '/download_nfr';  // Redirect to download endpoint
+                        }
+                    },
+                    error: function () {
+                        alert('Error submitting NFR extraction');
+                    }
+                });
+            });
+        });
+</script>
+{% endblock %}
+
+
+
+
+
+
+app.py
+
+import json
+from collections import defaultdict
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
+import openpyxl
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, make_response, send_file
+import sqlite3
+import os
+from openpyxl import load_workbook
+from datetime import datetime, timedelta
+import time
+from openpyxl import Workbook
+from tempfile import NamedTemporaryFile
+
+
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = './uploads'
+app.config['DOWNLOAD_FOLDER'] = './downloads'
+app.config['LOGS_FOLDER'] = './logs'
+app.secret_key = 'supersecretkey'
+
+# Ensure the upload folder exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Set up logging
+log_file = os.path.join(app.config['LOGS_FOLDER'], 'app.log')
+handler = TimedRotatingFileHandler(log_file, when='midnight', interval=1, backupCount=7)
+handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: [%(func)s] %(message)s'))
+handler.setLevel(logging.INFO)
+app.logger.addHandler(handler)
+
+
+# SQLite connection function
+def get_db_connection():
+    conn = sqlite3.connect('nfr_repository.db')
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+# Route to serve the static file template.xlsx
+@app.route('/downloads/template.xlsx')
+def download_template():
+    return app.send_static_file('downloads/template.xlsx')
+
+# Home route
+@app.route('/')
+def index():
+    conn = get_db_connection()
+    apps = conn.execute('SELECT DISTINCT applicationName FROM NFRDetails').fetchall()
+    conn.close()
+    #
+    # return render_template('index.html', apps=apps, role='admin')
+    if 'username' in session:
+        user = get_user_access(session['username'])
+
+        if user:
+            print(user)
+            print(user['role'])
+            return render_template('index.html', apps=apps, user=user)
+    user = {'userid': session['username'], 'role': 'user', 'activeStatus': 'active'}
+    return render_template('index.html', apps=apps, user=user)  # Fallback if no user is found
+
+# Route to upload the file
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+    error_log = []  # Initialize error_log
+    summary = None  # Initialize summary
+    if request.method == 'GET':
+        pass
+    if request.method == 'POST':
+        file = request.files['file']
+        if file and file.filename.endswith('.xlsx'):
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+            file.save(filepath)
+            try:
+                error_log, summary = process_excel_file(filepath)
+                if summary is None:
+                    flash('File was not processed due to errors.', 'danger')
+                else:
+                    flash('File successfully uploaded and processed.', 'success')
+            except Exception as e:
+                app.logger.error(f'Error processing file: {e}', extra={'func': 'UPLOAD'})
+                flash(f'Error processing file: {e}', 'danger')
+            return render_template('upload.html', logs=error_log, summary=summary)
+    return render_template('upload.html', logs=[], summary=summary)
+
+
+# Function to process the uploaded Excel file
+def process_excel_file(filepath):
+    error_log = []
+    total_records = 0
+    inserted_records = 0
+    updated_records = 0
+    passed_records = 0
+    failed_records = 0
+
+    # Define mandatory columns
+    mandatory_columns = ['ApplicationName', 'ReleaseID', 'BusinessScenario', 'TransactionName', 'SLA', 'TPS',
+                         'Comments']
+
+    try:
+        wb = load_workbook(filename=filepath)
+        ws = wb.active
+    except Exception as load_error:
+        error_log.append(f"Error loading Excel file: {load_error}")
+        app.logger.error(f"Error loading Excel file: {load_error}", extra={'func': 'PROCESS_EXCEL_FILE'})
+        return error_log, None  # Return error_log and summary as None immediately if loading the file fails
+
+    # Extract headers from the first row
+    headers = [cell.value for cell in ws[1]]
+
+    # Check if mandatory columns are present
+    missing_columns = [col for col in mandatory_columns if col not in headers]
+    if missing_columns:
+        error_message = f"Missing mandatory columns: {', '.join(missing_columns)}"
+        error_log.append(error_message)
+        app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+        raise Exception(error_message)  # Abort processing if mandatory columns are missing
+
+    # Map headers to their indexes
+    header_index_map = {header: index for index, header in enumerate(headers)}
+
+    current_user = session.get('user', 'defaultUser')  # Retrieve current user
+    current_time = "2024-06-06 10:10:10" #datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    with get_db_connection() as conn:
+        for row_number, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            # Extract data using header indices
+            try:
+                applicationName = row[header_index_map['ApplicationName']]
+                releaseID = row[header_index_map['ReleaseID']]
+                businessScenario = row[header_index_map['BusinessScenario']]
+                transactionName = row[header_index_map['TransactionName']]
+                SLA = row[header_index_map['SLA']]
+                TPS = row[header_index_map['TPS']]
+                comments = row[header_index_map['Comments']]
+            except IndexError as e:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: {e}"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+                continue
+
+            total_records += 1
+            # Validate SLA and TPS
+            if SLA is None or TPS is None:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: SLA and TPS must have values"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+                continue
+
+            try:
+                SLA = float(SLA)
+                TPS = float(TPS)
+            except ValueError:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: SLA and TPS must be valid numbers"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+                continue
+
+            try:
+                # Check if the record exists
+                cursor = conn.execute('''
+                    SELECT * FROM NFRDetails
+                    WHERE applicationName = ? AND releaseID = ? AND  transactionName = ?
+                ''', (applicationName, releaseID, transactionName))
+
+                existing_record = cursor.fetchone()
+                if existing_record:
+                    # Update the record
+                    conn.execute('''
+                        UPDATE NFRDetails
+                        SET businessScenario = ?, SLA = ?, TPS = ?, comments = ?, modifiedBy = ?, modified_date = ?
+                        WHERE applicationName = ? AND releaseID = ? AND transactionName = ?
+                    ''', (businessScenario, SLA, TPS, comments, current_user, current_time, applicationName, releaseID, transactionName))
+                    updated_records += 1
+                    # print(businessScenario, transactionName, SLA, TPS, comments, current_user, current_time, applicationName, releaseID)
+                else:
+                    # Insert the record
+                    conn.execute('''
+                        INSERT INTO NFRDetails (applicationName, releaseID, businessScenario, transactionName, SLA, TPS, comments, createdBy, modifiedBy, created_date, modified_date)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (applicationName, releaseID, businessScenario, transactionName, SLA, TPS, comments, current_user, current_user, current_time, current_time))
+                    inserted_records += 1
+                passed_records += 1
+            except Exception as e:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: {e}"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+
+        conn.commit()
+
+    summary = {
+        'total': total_records,
+        'inserted': inserted_records,
+        'updated': updated_records,
+        'passed': passed_records,
+        'failed': failed_records
+    }
+    # print(summary)
+    return error_log, summary
+
+# Fetch releases based on application name
+@app.route('/get_releases', methods=['POST'])
+def get_releases():
+    try:
+        applicationName = request.form['applicationName']
+        conn = get_db_connection()
+        releases = conn.execute('SELECT DISTINCT releaseID FROM NFRDetails WHERE applicationName = ?', (applicationName,)).fetchall()
+        conn.close()
+        return jsonify([release['releaseID'] for release in releases]), 200
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
+
+# Suggest transactions based on term and application name
+@app.route('/suggest_transactions', methods=['POST'])
+def suggest_transactions():
+    try:
+        term = request.form['term']
+        applicationName = request.form['applicationName']
+        conn = get_db_connection()
+        transactions = conn.execute('SELECT DISTINCT transactionName FROM NFRDetails WHERE applicationName = ? AND transactionName LIKE ?', (applicationName, f'%{term}%')).fetchall()
+        conn.close()
+        return jsonify([txn['transactionName'] for txn in transactions]), 200
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
+#
+# # Search records based on various parameters
+# @app.route('/search_records', methods=['POST'])
+# def search_records():
+#     try:
+#         applicationName = request.form['application_name']
+#         releaseID = request.form.get('release_id')
+#         transactionName = request.form.get('transaction_name')
+#         print('asasa')
+#         print('aaa' + applicationName, releaseID, transactionName)
+#         conn = get_db_connection()
+#
+#         query = 'SELECT * FROM NFRDetails WHERE applicationName = ?'
+#         params = [applicationName]
+#
+#         if releaseID:
+#             query += ' AND releaseID = ?'
+#             params.append(releaseID)
+#         if transactionName:
+#             if '*' in transactionName:
+#                 transactionName = transactionName.replace('*', '%')
+#             else:
+#                 transactionName = f'%{transactionName}%'
+#             query += ' AND transactionName LIKE ?'
+#             params.append(transactionName)
+#
+#         records = conn.execute(query, params).fetchall()
+#         conn.close()
+#
+#         return jsonify([dict(record) for record in records]), 200
+#     except Exception as e:
+#         return jsonify(success=False, message=str(e)), 500
+
+
+# Search records based on various parameters
+@app.route('/search_records', methods=['POST'])
+def search_records():
+    # Simulate processing delay
+    time.sleep(1)  # Delay of 1 second
+    try:
+        applicationName = request.form['application_name']
+        releaseID = request.form.get('release_id')
+        transactionName = request.form.get('transaction_name')
+
+        conn = get_db_connection()
+
+        query = 'SELECT * FROM NFRDetails WHERE applicationName = ?'
+        params = [applicationName]
+
+        if releaseID:
+            query += ' AND releaseID = ?'
+            params.append(releaseID)
+        if transactionName:
+            if '*' in transactionName:
+                transactionName = transactionName.replace('*', '%')
+            else:
+                transactionName = f'%{transactionName}%'
+            query += ' AND transactionName LIKE ?'
+            params.append(transactionName)
+
+        records = conn.execute(query, params).fetchall()
+        conn.close()
+
+        return jsonify([dict(record) for record in records]), 200
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
+
+
+# Get a single record by ID
+@app.route('/get_record', methods=['POST'])
+def get_record():
+    try:
+        record_id = request.form.get('Id')
+        if not record_id:
+            return jsonify(success=False, message="Record ID is missing."), 400
+        conn = get_db_connection()
+        record = conn.execute('SELECT * FROM NFRDetails WHERE Id = ?', (record_id,)).fetchone()
+        conn.close()
+        if not record:
+            return jsonify(success=False, message="Record not found."), 404
+        return jsonify(dict(record)), 200
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
+
+# Update a record
+@app.route('/update_record', methods=['POST'])
+def update_record():
+    try:
+        data = request.form.to_dict()
+
+        # Validate SLA and TPS
+        sla = data.get('SLA')
+        tps = data.get('TPS')
+
+        try:
+            sla_value = float(sla)
+            tps_value = float(tps)
+        except ValueError:
+            return jsonify(success=False, message="SLA and TPS must be valid numbers."), 400
+
+        if sla_value <= 0 or tps_value <= 0:
+            return jsonify(success=False, message="SLA and TPS must be positive numbers."), 400
+
+        conn = get_db_connection()
+        conn.execute(
+            'UPDATE NFRDetails SET businessScenario = ?, transactionName = ?, SLA = ?, TPS = ? WHERE Id = ?',
+            (data['businessScenario'], data['transactionName'], data['SLA'], data['TPS'], data['Id'])
+        )
+        conn.commit()
+        conn.close()
+        return jsonify(success=True, message="Record updated successfully."), 200
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
+
+# Delete a record
+@app.route('/delete_record', methods=['POST'])
+def delete_record():
+    try:
+        record_id = request.form['Id']
+        conn = get_db_connection()
+        conn.execute('DELETE FROM NFRDetails WHERE Id = ?', (record_id,))
+        conn.commit()
+        conn.close()
+        return jsonify(success=True, message="Record deleted successfully."), 200
+    except Exception as e:
+        return jsonify(success=False, message=str(e)), 500
+
+
+# Route to compare records
+@app.route('/compare')
+def compare():
+    conn = get_db_connection()
+    apps = conn.execute('SELECT DISTINCT applicationName FROM NFRDetails').fetchall()
+    conn.close()
+    # return render_template('compare.html', apps=apps)
+    if 'username' in session:
+        user = get_user_access(session['username'])
+        if user:
+            return render_template('compare.html', apps=apps, user=user)
+    user = {'userid': session['username'], 'role': 'user', 'activeStatus': 'active'}
+    return render_template('compare.html', apps=apps, user=user)
+
+
+
+# @app.route('/compare_records', methods=['POST'])
+# def compare_records():
+#     try:
+#         applicationName = request.form['applicationName']
+#         releaseID1 = request.form['releaseID1']
+#         releaseID2 = request.form['releaseID2']
+#         releaseID3 = request.form['releaseID3']
+#         transactionName = request.form['transactionName']
+#
+#         if '*' in transactionName:
+#             transactionName = transactionName.replace('*', '%')
+#         else:
+#             transactionName = f'{transactionName}'
+#
+#         selected_releases = [(releaseID1, 'Release1'), (releaseID2, 'Release2'), (releaseID3, 'Release3')]
+#         columns = []
+#         query_cols = []
+#         for release, alias in selected_releases:
+#             if release:
+#                 columns.append(f'{release} SLA')
+#                 columns.append(f'{release} TPS')
+#                 query_cols.append(f'SUM(CASE WHEN releaseID = ? THEN SLA END) AS "{release} SLA"')
+#                 query_cols.append(f'SUM(CASE WHEN releaseID = ? THEN TPS END) AS "{release} TPS"')
+#
+#         query = f"""
+#         SELECT transactionName, {", ".join(query_cols)}
+#         FROM NFRDetails
+#         WHERE applicationName = ?
+#         AND transactionName LIKE ?
+#         GROUP BY transactionName
+#         """
+#
+#         # Ensure the parameter order matches the query
+#         params = []
+#         for release, _ in selected_releases:
+#             if release:
+#                 params.extend([release, release])  # Extend params list with release twice (for SLA and TPS)
+#         params.append(applicationName)
+#         params.append(f'%{transactionName}%')
+#
+#         conn = get_db_connection()
+#         cursor = conn.execute(query, params)
+#         results = cursor.fetchall()
+#         conn.close()
+#
+#         # Convert results to a dictionary
+#         records = [{**dict(row)} for row in results]
+#         print(records)
+#         # Return JSON response with columns and records
+#         return jsonify(columns=['Transaction Name'] + columns, records=records), 200
+#
+#     except Exception as e:
+#         print("Exception occurred:", str(e))
+#         return jsonify(success=False, message=str(e)), 500
+
+@app.route('/compare_records', methods=['POST'])
+def compare_records():
+    try:
+        applicationName = request.form['applicationName']
+        releaseID1 = request.form['releaseID1']
+        releaseID2 = request.form['releaseID2']
+        releaseID3 = request.form['releaseID3']
+        transactionName = request.form['transactionName']
+        # Check if show_all_rows parameter is present in the form data
+        if 'show_all_rows' in request.form:
+            show_all_rows = request.form['show_all_rows'].lower() == 'true'  # Convert to boolean
+        else:
+            show_all_rows = False  # Default to False if parameter is not provided
+
+        if '*' in transactionName:
+            transactionName = transactionName.replace('*', '%')
+        else:
+            transactionName = f'{transactionName}'
+
+        selected_releases = [(releaseID1, 'Release1'), (releaseID2, 'Release2'), (releaseID3, 'Release3')]
+        columns = []
+        query_cols = []
+        for release, alias in selected_releases:
+            if release:
+                columns.append(f'{release} SLA')
+                columns.append(f'{release} TPS')
+                query_cols.append(f'SUM(CASE WHEN releaseID = ? THEN SLA END) AS "{release} SLA"')
+                query_cols.append(f'SUM(CASE WHEN releaseID = ? THEN TPS END) AS "{release} TPS"')
+
+        query = f"""
+        SELECT transactionName, {", ".join(query_cols)}
+        FROM NFRDetails
+        WHERE applicationName = ?
+        AND transactionName LIKE ?
+        GROUP BY transactionName
+        """
+
+        # Ensure the parameter order matches the query
+        params = []
+        for release, _ in selected_releases:
+            if release:
+                params.extend([release, release])  # Extend params list with release twice (for SLA and TPS)
+        params.append(applicationName)
+        params.append(f'%{transactionName}%')
+
+        conn = get_db_connection()
+        cursor = conn.execute(query, params)
+        results = cursor.fetchall()
+        conn.close()
+
+        # Convert results to a dictionary
+        records = [{**dict(row)} for row in results]
+
+        # Filter records based on show_all_rows flag
+        if not show_all_rows:
+            records = [record for record in records if any(record.get(column) is not None for column in columns)]
+
+        # Return JSON response with columns and filtered records
+        if 'username' in session:
+            user = get_user_access(session['username'])
+
+            if user:
+                return jsonify(columns=['Transaction Name'] + columns, records=records, user=user), 200
+        user = {'userid': session['username'], 'role': 'user', 'activeStatus': 'active'}
+
+        return jsonify(columns=['Transaction Name'] + columns, records=records, user=user), 200
+
+    except Exception as e:
+        print("Exception occurred:", str(e))
+        return jsonify(success=False, message=str(e)), 500
+
+# # Route for the discrepancy page
+# @app.route('/discrepancy', methods=['GET', 'POST'])
+# def handle_discrepancy():
+#     if request.method == 'POST':
+#         application_name = request.form.get('application_name')
+#         release_id = request.form.get('release_id')
+#         #     WHEN COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) = 0 THEN 'NA'
+#         #     ELSE CASE WHEN SLA > COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Higher' ELSE 'Lower' END
+#         # END AS Compare
+#         query = """
+#             WITH NFRDetailDepend AS (
+#                 SELECT
+#                     t.applicationName, t.transactionName, t.releaseID, t.SLA,
+#                     d.backendCall, d.callType
+#                 FROM NFRDetails t
+#                 LEFT JOIN  NFROperationDependency d ON t.transactionName = d.transactionName
+#                 WHERE t.applicationName = ? AND t.releaseID = ?
+#             )
+#             SELECT
+#                 ApplicationName, releaseID, transactionName, SLA,
+#                 COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) AS TotalBackendCallDuration,
+#                 GROUP_CONCAT(backendCall) AS backendCallList,
+#                 CASE
+#
+#                     WHEN COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) = 0 THEN 'NA'
+#                     ELSE CASE WHEN SLA > COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Higher'
+#                               WHEN SLA < COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Lower'
+#                               ELSE 'Equal'
+#                           END
+#                 END AS Compare
+#             FROM (
+#                 SELECT
+#                     ApplicationName, transactionName, releaseID, SLA, backendCall,
+#                     SUM(CASE WHEN CallType = 'Sync' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName) AS TotalSyncSLA,
+#                     MAX(CASE WHEN CallType = 'Async' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName) AS MaxAsyncSLA
+#                 FROM (
+#                     SELECT
+#                         ApplicationName, transactionName, backendCall, CallType, SLA, releaseID,
+#                         CASE
+#                             WHEN CallType = 'Async' THEN (SELECT MAX(SLA) FROM NFRDetails WHERE transactionName = t.backendCall AND t.CallType = 'Async')
+#                             WHEN CallType = 'Sync' THEN (SELECT SUM(SLA) FROM NFRDetails WHERE transactionName = t.backendCall AND t.CallType = 'Sync')
+#                             ELSE 0
+#                         END AS SLAComparison
+#                     FROM NFRDetailDepend t
+#                 ) AS x
+#                 WHERE ApplicationName = ? AND releaseID = ?
+#             ) AS p
+#             GROUP BY ApplicationName, releaseID, transactionName, SLA, Compare;
+#         """
+#
+#         params = (application_name, release_id, application_name, release_id)
+#
+#         conn = get_db_connection()
+#         cur = conn.cursor()
+#         cur.execute(query, params)
+#         rows = cur.fetchall()
+#         conn.close()
+#
+#         data = []
+#
+#         for row in rows:
+#             # Use the correct key for backend call list
+#             if row['backendCallList'] is not None:
+#                 concatenated_calls = f"<b>Backend Duration (sec)</b>: {row['TotalBackendCallDuration']}<br><b>Backend Calls:</b> <br>" + \
+#                                      row['backendCallList'].replace(',', ',<br>')
+#             else:
+#                 concatenated_calls = f"<b>Backend Duration (sec)</b>: {row['TotalBackendCallDuration']}<br><b>Backend Calls:</b> None"
+#
+#             comparison_icon = ''
+#             comparison_text = ''
+#
+#             if row['Compare'] == 'Higher':
+#                 comparison_icon = '<i class="fas fa-arrow-up" title="Higher"></i>'
+#                 comparison_text = 'Higher'
+#             elif row['Compare'] == 'Lower':
+#                 comparison_icon = '<i class="fas fa-arrow-down" title="Lower"></i>'
+#                 comparison_text = 'Lower'
+#             elif row['Compare'] == 'Equal':
+#                 comparison_icon = '<i class="fas fa-exchange-alt" title="Equal"></i>'
+#                 comparison_text = 'Equal'
+#             # print(concatenated_calls)
+#             data.append({
+#                 'ApplicationName': row['ApplicationName'],
+#                 'releaseID': row['releaseID'],
+#                 'transactionName': row['transactionName'],
+#                 'SLA': row['SLA'],
+#                 'backendCall': concatenated_calls,
+#                 'Compare': row['Compare']
+#             })
+#         # print(data)
+#         return jsonify(data)
+#
+#     else:
+#         # Handle GET request logic here (if needed)
+#         conn = get_db_connection()
+#         apps = conn.execute('SELECT DISTINCT applicationName FROM NFRDetails').fetchall()
+#         conn.close()
+#
+#         searches_cookie = request.cookies.get('recent_searches')
+#         if searches_cookie:
+#             recent_searches = json.loads(searches_cookie)
+#         else:
+#             recent_searches = []
+#
+#         return render_template('discrepancy.html', apps=apps, recent_searches=recent_searches)
+#         # return render_template('discrepancy.html', apps=apps)
+
+# # Route for the discrepancy page
+# @app.route('/discrepancy', methods=['GET', 'POST'])
+# def handle_discrepancy():
+#     if request.method == 'POST':
+#         application_name = request.form.get('application_name')
+#         release_id = request.form.get('release_id')
+#         transaction_name = request.form.get('transaction_name')  # Get the transaction name from the form
+#
+#         # Define the base query with placeholders for filters
+#         query = """
+#             WITH NFRDetailDepend AS (
+#                 SELECT
+#                     t.applicationName, t.transactionName, t.releaseID, t.SLA,
+#                     d.backendCall, d.callType
+#                 FROM NFRDetails t
+#                 LEFT JOIN NFROperationDependency d ON t.transactionName = d.transactionName
+#                 WHERE t.applicationName = ? AND (
+#                         t.releaseID = ? OR
+#                         t.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE applicationName = t.applicationName and transactionName = t.transactionName)
+#                     )
+#         """
+#
+#         params = [application_name, release_id]
+#
+#         # Add transactionName filter if provided
+#         if transaction_name:
+#             query += " AND t.transactionName like ?"
+#             # params.append(transaction_name)
+#             params.append(f'%{transaction_name}%')
+#         query += """
+#             )
+#             SELECT
+#                 ApplicationName, releaseID, transactionName, SLA,
+#                 COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) AS TotalBackendCallDuration,
+#                 GROUP_CONCAT(backendCall) AS backendCallList,
+#                 CASE
+#                     WHEN COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) = 0 THEN 'NA'
+#                     ELSE CASE WHEN SLA > COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Higher'
+#                               WHEN SLA < COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Lower'
+#                               ELSE 'Equal'
+#                           END
+#                 END AS Compare
+#             FROM (
+#                 SELECT
+#                     ApplicationName, transactionName, releaseID, SLA, backendCall,
+#                     SUM(CASE WHEN CallType = 'Sync' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName) AS TotalSyncSLA,
+#                     MAX(CASE WHEN CallType = 'Async' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName) AS MaxAsyncSLA
+#                 FROM (
+#                     SELECT
+#                         ApplicationName, transactionName, backendCall, CallType, SLA, releaseID,
+#                         CASE
+#                             WHEN CallType = 'Async' THEN (SELECT MAX(SLA) FROM NFRDetails WHERE transactionName = t.backendCall AND t.CallType = 'Async')
+#                             WHEN CallType = 'Sync' THEN (SELECT SUM(SLA) FROM NFRDetails WHERE transactionName = t.backendCall AND t.CallType = 'Sync')
+#                             ELSE 0
+#                         END AS SLAComparison
+#                     FROM NFRDetailDepend t
+#                 ) AS x
+#                 WHERE ApplicationName = ? AND releaseID = ?
+#         """
+#
+#         params += [application_name, release_id]
+#
+#         # Add transactionName filter if provided
+#         if transaction_name:
+#             query += " AND transactionName like ?"
+#             # params.append(transaction_name)
+#             params.append(f'%{transaction_name}%')
+#         query += """
+#             ) AS p
+#             GROUP BY ApplicationName, releaseID, transactionName, SLA, Compare;
+#         """
+#
+#         print(query)
+#         print(params)
+#         # Execute the query
+#         conn = get_db_connection()
+#         cur = conn.cursor()
+#         cur.execute(query, params)
+#         rows = cur.fetchall()
+#         conn.close()
+#
+#         data = []
+#
+#         for row in rows:
+#             # Use the correct key for backend call list
+#             if row['backendCallList'] is not None:
+#                 concatenated_calls = f"<b>Backend Duration (sec)</b>: {row['TotalBackendCallDuration']}<br><b>Backend Calls:</b> <br>" + \
+#                                      row['backendCallList'].replace(',', ',<br>')
+#             else:
+#                 concatenated_calls = f"<b>Backend Duration (sec)</b>: {row['TotalBackendCallDuration']}<br><b>Backend Calls:</b> None"
+#
+#             comparison_icon = ''
+#             comparison_text = ''
+#
+#             if row['Compare'] == 'Higher':
+#                 comparison_icon = '<i class="fas fa-arrow-up" title="Higher"></i>'
+#                 comparison_text = 'Higher'
+#             elif row['Compare'] == 'Lower':
+#                 comparison_icon = '<i class="fas fa-arrow-down" title="Lower"></i>'
+#                 comparison_text = 'Lower'
+#             elif row['Compare'] == 'Equal':
+#                 comparison_icon = '<i class="fas fa-exchange-alt" title="Equal"></i>'
+#                 comparison_text = 'Equal'
+#
+#             data.append({
+#                 'ApplicationName': row['ApplicationName'],
+#                 'releaseID': row['releaseID'],
+#                 'transactionName': row['transactionName'],
+#                 'SLA': row['SLA'],
+#                 'backendCall': concatenated_calls,
+#                 'Compare': row['Compare']
+#             })
+#         return jsonify(data)
+#
+#     else:
+#         # Handle GET request logic here (if needed)
+#         conn = get_db_connection()
+#         apps = conn.execute('SELECT DISTINCT applicationName FROM NFRDetails').fetchall()
+#         conn.close()
+#
+#         searches_cookie = request.cookies.get('recent_searches')
+#         if searches_cookie:
+#             recent_searches = json.loads(searches_cookie)
+#         else:
+#             recent_searches = []
+#
+#         return render_template('discrepancy.html', apps=apps, recent_searches=recent_searches)
+
+@app.route('/discrepancy', methods=['GET', 'POST'])
+def handle_discrepancy():
+    if 'username' in session:
+        user = get_user_access(session['username'])
+
+        if not user:
+            user = {'userid': session['username'], 'role': 'user', 'activeStatus': 'active'}
+    try:
+        if request.method == 'POST':
+            application_name = request.form.get('application_name')
+            release_id = request.form.get('release_id')
+            transaction_name = request.form.get('transaction_name')
+
+            # If transaction_name is empty, set it to None
+            transaction_name = transaction_name if transaction_name else None
+
+            query = """
+                            WITH LatestReleaseForBackendCall AS (
+                                SELECT 
+                                    transactionName AS backendCall, 
+                                    MAX(releaseID) AS recentReleaseID
+                                FROM NFRDetails
+                                GROUP BY transactionName
+                            ),
+                            NFRDetailDepend AS (
+                                SELECT
+                                    t.applicationName, 
+                                    t.transactionName, 
+                                    t.releaseID, 
+                                    t.SLA,
+                                    d.backendCall, 
+                                    d.callType
+                                FROM NFRDetails t
+                                LEFT JOIN NFROperationDependency d ON t.transactionName = d.transactionName
+                                LEFT JOIN LatestReleaseForBackendCall lrb ON d.backendCall = lrb.backendCall
+                                WHERE t.applicationName = ? 
+                                  AND (t.releaseID = ? OR EXISTS (
+                                        SELECT 1
+                                        FROM LatestReleaseForBackendCall lrb
+                                        WHERE lrb.backendCall = d.backendCall
+                                          AND lrb.recentReleaseID = t.releaseID
+                                    ))
+                                  AND (? IS NULL OR t.transactionName LIKE ?)
+                            ),
+                            SLAComparisonCTE AS (
+                                SELECT 
+                                    t.ApplicationName, 
+                                    t.transactionName, 
+                                    t.backendCall, 
+                                    t.CallType, 
+                                    t.SLA, 
+                                    t.releaseID,
+                                    CASE 
+                                        WHEN t.CallType = 'Async' THEN 
+                                            (SELECT MAX(SLA) 
+                                             FROM NFRDetails nr 
+                                             WHERE nr.transactionName = t.backendCall 
+                                               AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall))
+                                        WHEN t.CallType = 'Sync' THEN 
+                                            (SELECT SUM(SLA) 
+                                             FROM NFRDetails nr 
+                                             WHERE nr.transactionName = t.backendCall 
+                                               AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall))
+                                        ELSE 0 
+                                    END AS SLAComparison
+                                FROM NFRDetailDepend t
+                            )
+                            SELECT
+                                ApplicationName, 
+                                releaseID, 
+                                transactionName, 
+                                SLA,
+                                ROUND(COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0), 2) AS TotalBackendCallDuration,
+                                GROUP_CONCAT(backendCall) AS backendCallList,
+                                CASE
+                                    WHEN COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) = 0 THEN 'NA'
+                                    ELSE CASE 
+                                        WHEN SLA > COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Higher' 
+                                        WHEN SLA < COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Lower' 
+                                        ELSE 'Equal' 
+                                    END 
+                                END AS Compare
+                            FROM (
+                                SELECT 
+                                    ApplicationName, 
+                                    transactionName, 
+                                    releaseID, 
+                                    SLA, 
+                                    backendCall,
+                                    SUM(CASE WHEN CallType = 'Sync' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName, releaseID) AS TotalSyncSLA,
+                                    MAX(CASE WHEN CallType = 'Async' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName, releaseID) AS MaxAsyncSLA
+                                FROM SLAComparisonCTE
+                            ) AS p
+                            WHERE ApplicationName = ? 
+                              AND releaseID = ? 
+                              AND (? IS NULL OR transactionName LIKE ?)
+                            GROUP BY ApplicationName, releaseID, transactionName, SLA;
+                        """
+
+            params = [
+                application_name,
+                release_id,
+                transaction_name, f'%{transaction_name}%' if transaction_name else None,
+                application_name,
+                release_id,
+                transaction_name, f'%{transaction_name}%' if transaction_name else None
+            ]
+
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(query, params)
+            rows = cur.fetchall()
+            conn.close()
+
+            data = []
+
+            for row in rows:
+                if row['backendCallList']:
+                    concatenated_calls = f"<b>Backend Duration (sec)</b>: {row['TotalBackendCallDuration']}<br><b>Backend Calls:</b> <br>" + \
+                                         row['backendCallList'].replace(',', ',<br>')
+                else:
+                    concatenated_calls = f"<b>Backend Duration (sec)</b>: {row['TotalBackendCallDuration']}<br><b>Backend Calls:</b> None"
+
+                comparison_icon = ''
+                comparison_text = ''
+
+                if row['Compare'] == 'Higher':
+                    comparison_icon = '<i class="fas fa-arrow-up" title="Higher"></i>'
+                    comparison_text = 'Higher'
+                elif row['Compare'] == 'Lower':
+                    comparison_icon = '<i class="fas fa-arrow-down" title="Lower"></i>'
+                    comparison_text = 'Lower'
+                elif row['Compare'] == 'Equal':
+                    comparison_icon = '<i class="fas fa-exchange-alt" title="Equal"></i>'
+                    comparison_text = 'Equal'
+
+                data.append({
+                    'ApplicationName': row['ApplicationName'],
+                    'releaseID': row['releaseID'],
+                    'transactionName': row['transactionName'],
+                    'SLA': row['SLA'],
+                    'backendCall': concatenated_calls,
+                    'Compare': row['Compare'],
+
+                })
+
+
+            return jsonify(data)
+
+        else:
+            conn = get_db_connection()
+            apps = conn.execute('SELECT DISTINCT applicationName FROM NFRDetails').fetchall()
+            conn.close()
+
+            searches_cookie = request.cookies.get('recent_searches')
+            recent_searches = json.loads(searches_cookie) if searches_cookie else []
+
+            return render_template('discrepancy.html', apps=apps, recent_searches=recent_searches, user=user)
+
+    except Exception as e:
+        print("Exception occurred:", str(e))
+        return jsonify(success=False, message=str(e)), 500
+
+
+# Save search handler with dynamic cookie name
+@app.route('/save_search/<cookie_name>', methods=['POST'])
+def save_search(cookie_name):
+    data = request.json
+    # print(data)
+
+    # Retrieve the current searches from the cookie
+    searches_cookie = request.cookies.get(cookie_name)
+    if searches_cookie:
+        recent_searches = json.loads(searches_cookie)
+    else:
+        recent_searches = []
+
+    # Check if the search criteria already exists
+    if data not in recent_searches:
+        # Add new search criteria to the list
+        recent_searches.append(data)
+        # Keep only the last 5 searches
+        recent_searches = recent_searches[-5:]
+
+        # Set the cookie
+        response = make_response(jsonify({'status': 'success'}))
+        expires = datetime.utcnow() + timedelta(days=3)
+        response.set_cookie(cookie_name, json.dumps(recent_searches), expires=expires)
+    else:
+        # If search criteria already exists, return success without updating the cookie
+        response = jsonify({'status': 'success'})
+
+    return response
+
+
+# Route to get recent searches
+@app.route('/recent_searches/<cookie_name>', methods=['GET'])
+def recent_searches(cookie_name):
+    recent_searches_cookie = request.cookies.get(cookie_name)
+    if recent_searches_cookie:
+        recent_searches = json.loads(recent_searches_cookie)
+    else:
+        recent_searches = []
+    # print(recent_searches)
+    # print(cookie_name)
+    return jsonify(recent_searches)
+
+
+# Function to process Excel file and update database
+
+def process_excel(filepath):
+    error_log = []
+    total_records = 0
+    inserted_records = 0
+    updated_records = 0
+    passed_records = 0
+    failed_records = 0
+
+    # Define mandatory columns
+    mandatory_columns = ['ApplicationName', 'ReleaseID', 'BusinessScenario', 'TransactionName', 'BackendCall', 'CallType']
+
+    try:
+        wb = load_workbook(filename=filepath)
+        ws = wb.active
+    except Exception as load_error:
+        error_log.append(f"Error loading Excel file: {load_error}")
+        app.logger.error(f"Error loading Excel file: {load_error}", extra={'func': 'PROCESS_EXCEL_FILE'})
+        return error_log, None  # Return error_log and summary as None immediately if loading the file fails
+
+    # Extract headers from the first row
+    headers = [cell.value for cell in ws[1]]
+
+    # Check if mandatory columns are present
+    missing_columns = [col for col in mandatory_columns if col not in headers]
+    if missing_columns:
+        error_message = f"Missing mandatory columns: {', '.join(missing_columns)}"
+        error_log.append(error_message)
+        app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+        raise Exception(error_message)  # Abort processing if mandatory columns are missing
+
+    # Map headers to their indexes
+    header_index_map = {header: index for index, header in enumerate(headers)}
+
+    current_user = session.get('user', 'defaultUser')  # Retrieve current user
+    current_time = "2024-06-06 10:10:10"  # datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    with get_db_connection() as conn:
+        for row_number, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            # Extract data using header indices
+            try:
+                applicationName = row[header_index_map['ApplicationName']]
+                releaseID = row[header_index_map['ReleaseID']]
+                businessScenario = row[header_index_map['BusinessScenario']]
+                transactionName = row[header_index_map['TransactionName']]
+                callType = row[header_index_map['CallType']]
+                backendCall = row[header_index_map['BackendCall']]
+                comments = row[header_index_map['Comments']] if 'Comments' in header_index_map else "" #None
+            except IndexError as e:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: {e}"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+                continue
+            createdBy = "defaultUser"
+            total_records += 1
+
+            try:
+                # Check if the record exists
+                cursor = conn.execute('''
+                    SELECT * FROM NFROperationDependency
+                    WHERE applicationName = ? AND releaseID = ? AND  transactionName = ?
+                ''', (applicationName, releaseID, transactionName))
+
+                existing_record = cursor.fetchone()
+                if existing_record:
+                    # Update the record
+                    conn.execute("""
+                        UPDATE NFROperationDependency
+						SET backendCall = ?, callType = ?, comments = ?,  modifiedBy = ?, modifed_date = ?
+						WHERE applicationName = ? AND businessScenario = ? AND transactionName = ? AND releaseID = ?
+						""", (backendCall, callType, comments,  createdBy, datetime.now(),
+							  applicationName, businessScenario, transactionName, releaseID))
+                    updated_records += 1
+
+                else:
+                    # Insert the record
+                    conn.execute("""
+                        INSERT INTO NFROperationDependency (applicationName, releaseID, businessScenario, transactionName, backendCall, callType, comments, createdBy, created_date)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+					""", (applicationName, releaseID, businessScenario, transactionName, backendCall, callType, comments, createdBy, datetime.now()))
+                    inserted_records += 1
+                passed_records += 1
+            except Exception as e:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: {e}"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+
+        conn.commit()
+
+    summary = {
+        'total': total_records,
+        'inserted': inserted_records,
+        'updated': updated_records,
+        'passed': passed_records,
+        'failed': failed_records
+    }
+    print(summary)
+    return error_log, summary
+
+
+
+@app.route('/upload_dependency', methods=['GET','POST'])
+def upload_dependency():
+    error_log = []  # Initialize error_log
+    summary = None  # Initialize summary
+    if 'username' in session:
+        user = get_user_access(session['username'])
+
+        if not user:
+            user = {'userid': session['username'], 'role': 'user', 'activeStatus': 'active'}
+
+
+    if request.method == 'GET':
+        pass
+    if request.method == 'POST':
+        file = request.files['file']
+        if file and file.filename.endswith('.xlsx'):
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+            file.save(filepath)
+            try:
+                error_log, summary = process_excel(filepath)
+                if summary is None:
+                    flash('File was not processed due to errors.', 'danger')
+                else:
+                    flash('File successfully uploaded and processed.', 'success')
+            except Exception as e:
+                app.logger.error(f'Error processing file: {e}', extra={'func': 'UPLOAD'})
+                flash(f'Error processing file: {e}', 'danger')
+            return render_template('upload_dependency.html', logs=error_log, summary=summary, user=user)
+    return render_template('upload_dependency.html', logs=[], summary=summary, user=user)
+
+# Function to check user role
+def check_user_role(userid):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT role FROM UserAccess WHERE userid = ?', (userid,))
+    role = cursor.fetchone()
+    conn.close()
+    return role[0] if role else None
+
+# Route to render the webpage for managing UserAccess
+@app.route('/manage_user_access', methods=['GET'])
+def manage_user_access():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM UserAccess')
+    users = cursor.fetchall()
+    conn.close()
+    return render_template('manage_user_access.html', users=users)
+
+# Route to handle adding or editing UserAccess records
+@app.route('/save_user_access', methods=['POST'])
+def save_user_access():
+    userid = request.form['userid']
+    role = request.form['role']
+    status = request.form['status']
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('INSERT OR REPLACE INTO UserAccess (userid, role, status) VALUES (?, ?, ?)', (userid, role, status))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True})
+
+# Route to handle deleting UserAccess records
+@app.route('/delete_user_access/<userid>', methods=['DELETE'])
+def delete_user_access(userid):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM UserAccess WHERE userid = ?', (userid,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True})
+
+
+# User credentials for demo purposes (should be securely managed in a real application)
+USER_CREDENTIALS = {
+    'admin': 'admin123',
+    'poweruser': 'power123',
+    'user': 'user123'
+}
+
+# Function to check if credentials are valid
+def validate_credentials(username, password):
+    if username in USER_CREDENTIALS and USER_CREDENTIALS[username] == password:
+        return True
+    return False
+
+
+# Route to handle login and authentication
+@app.route('/login', methods=['GET','POST'])
+def login():
+    if request.method == 'GET':
+        return render_template('login.html')
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        if validate_credentials(username, password):
+            role = check_user_role(username)
+            return redirect(url_for('manage_user_access', role=role))
+        else:
+            return render_template('login.html', error='Invalid credentials. Please try again.')
+
+
+#
+# # Synonym dictionary (you can expand this as needed)
+# synonyms = {
+#     'Mobile': 'Mobile Banking',
+#     'OLB': 'Online Banking',
+#     'OLB1': 'Online Banking'
+# }
+#
+# # Function to find closest match for application name
+# def find_closest_match(conn, input_text):
+#     cursor = conn.cursor()
+#     query = f"SELECT DISTINCT applicationName FROM NFRDetails WHERE applicationName LIKE '%{input_text}%'"
+#     cursor.execute(query)
+#     results = cursor.fetchall()
+#     if results:
+#         return results[0][0]  # Return the closest match
+#     else:
+#         return None
+#
+# # Function to handle synonym mapping
+# def map_synonym(input_text):
+#     if input_text in synonyms:
+#         return synonyms[input_text]
+#     else:
+#         return input_text
+#
+# # Prompts for NFR extraction
+# prompts_extraction = [
+#     "Please enter the Application Name:",
+#     "Please enter the Release ID:",
+#     "Please enter the Transaction Name (optional):"
+# ]
+#
+# # Prompts for NFR input
+# prompts_input = [
+#     "Please enter the Application Name:",
+#     "Please enter the Release ID:",
+#     "Please describe the Business Scenario:",
+#     "Please enter the Transaction Name:",
+#     "Please enter the SLA (Service Level Agreement in seconds):",
+#     "Please enter the TPS (Transactions Per Second):",
+#     "Please add any additional Comments (optional):"
+# ]
+#
+# # Function to prompt user for NFR input details step by step
+# def prompt_nfr_input(prompt_index):
+#     return prompts_input[prompt_index]
+#
+# # Function to prompt user for NFR extraction details step by step
+# def prompt_nfr_extraction(prompt_index):
+#     return prompts_extraction[prompt_index]
+#
+#
+#
+# # Route to handle NFR input
+# @app.route('/input_nfr', methods=['POST'])
+# def input_nfr():
+#     data = request.get_json()
+#
+#     # Extract inputs from user
+#     prompt_index = data.get('prompt_index', 0)
+#     application_name = data.get('application_name', '').strip()
+#     release_id = data.get('release_id', '').strip()
+#     business_scenario = data.get('business_scenario', '').strip()
+#     transaction_name = data.get('transaction_name', '').strip()
+#     sla = data.get('sla', '').strip()
+#     tps = data.get('tps', '').strip()
+#     comments = data.get('comments', '').strip()
+#
+#     # Validate inputs
+#     if prompt_index < len(prompts_input):
+#         return jsonify({'prompt': prompt_nfr_input(prompt_index), 'prompt_index': prompt_index + 1})
+#     else:
+#         # Perform further validations (e.g., numeric for SLA and TPS)
+#         try:
+#             float(sla)
+#             float(tps)
+#         except ValueError:
+#             return jsonify({'success': False, 'message': 'SLA and TPS must be numeric'})
+#
+#         # Save the NFR details (simulated with print statements)
+#         print(f"Application Name: {application_name}")
+#         print(f"Release ID: {release_id}")
+#         print(f"Business Scenario: {business_scenario}")
+#         print(f"Transaction Name: {transaction_name}")
+#         print(f"SLA: {sla}")
+#         print(f"TPS: {tps}")
+#         print(f"Comments: {comments}")
+#
+#         return jsonify({'success': True})
+#
+# # Route to handle extracting NFR details based on user input
+# @app.route('/extract_nfr', methods=['POST'])
+# def extract_nfr():
+#     data = request.get_json()
+#
+#     # Extract inputs from user
+#     prompt_index = data.get('prompt_index', 0)
+#     application_name = data.get('application_name', '').strip()
+#     release_id = data.get('release_id', '').strip()
+#     transaction_name = data.get('transaction_name', '').strip()
+#
+#     # Validate inputs
+#     if prompt_index < len(prompts_extraction):
+#         return jsonify({'prompt': prompt_nfr_extraction(prompt_index), 'prompt_index': prompt_index + 1})
+#     else:
+#         # Map application_name using synonyms
+#         mapped_application_name = map_synonym(application_name)
+#
+#         # Check if exact Application Name exists in database
+#         conn = get_db_connection()
+#         cursor = conn.cursor()
+#
+#         # Attempt to find exact match for application_name
+#         sql_query = f"SELECT * FROM NFRDetails WHERE applicationName='{mapped_application_name}' AND releaseID='{release_id}'"
+#
+#         if transaction_name:
+#             sql_query += f" AND transactionName='{transaction_name}'"
+#
+#         cursor.execute(sql_query)
+#         nfr_data = cursor.fetchall()
+#
+#         if not nfr_data:
+#             # If no exact match, find closest match for applicationName
+#             closest_match = find_closest_match(conn, mapped_application_name)
+#             if closest_match:
+#                 confirm_message = f"Do you mean '{closest_match}' for Application Name?"
+#                 return jsonify({'success': False, 'confirm': True, 'confirm_message': confirm_message})
+#             else:
+#                 return jsonify({'success': False, 'message': 'No matching NFR details found'})
+#
+#         # Create Excel file and populate with NFR details
+#         wb = Workbook()
+#         ws = wb.active
+#         ws.append(['Application Name', 'Release ID', 'Business Scenario', 'Transaction Name', 'SLA', 'TPS', 'Comments'])
+#
+#         for row in nfr_data:
+#             ws.append(row)
+#
+#         # Save the workbook to a temporary file
+#         tmp_file = NamedTemporaryFile(delete=True)
+#         wb.save(tmp_file.name)
+#
+#         # Seek to the beginning of the temporary file
+#         tmp_file.seek(0)
+#
+#         # Return the file as a downloadable attachment
+#         return send_file(tmp_file.name, as_attachment=True, download_name='extracted_nfr_details.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+
+
+def get_user_access(username):
+    conn = get_db_connection()
+    user = conn.execute('SELECT * FROM UserAccess WHERE LOWER(userid) = LOWER(?)', (username.lower(),)).fetchone()
+    conn.close()
+    return user
+
+# Set session username to the actual Windows logged-in user
+@app.before_request
+
+def set_session_user():
+    session['username'] = os.getlogin()
+
+if __name__ == '__main__':
+    app.run(host='127.0.0.1', port=8080)
+
+
+
+
+styles.css
+
+/* General body styles */
+body {
+    font-family: Calibri, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #333;
+    background-color: #fff;
+}
+
+/* Container styles */
+.custom-container {
+    overflow: auto;
+}
+
+/* Main content styles */
+.custom-main-container {
+    width: 100%; /* Full width */
+    box-sizing: border-box; /* Include padding in width calculation */
+}
+
+/* General container styles */
+.custom-main-container .container {
+    /*margin-left: 6% !important;
+    padding: 2%;
+    width:100% !important;
+    box-sizing: border-box;*/
+}
+
+/* General container styles */
+.container1 {
+    margin-left: 7% !important;
+    width:90% !important;
+    box-sizing: border-box;
+}
+
+/* Form styles */
+form {
+    margin-bottom: 20px;
+}
+
+/* Heading styles */
+h1,
+h2 {
+    color: #333;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+/* Button styles */
+.btn {
+    font-size: 0.9rem;
+    padding: 8px 16px;
+}
+
+/* List styles */
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+/* Flash message styles */
+.flashes li.success {
+    color: green;
+    font-size: 0.9rem;
+}
+
+.flashes li.warning {
+    color: orange;
+    font-size: 0.9rem;
+}
+
+.flashes li.danger {
+    color: red;
+    font-size: 0.9rem;
+}
+
+/* Card styles */
+.card-body {
+    font-size: 0.9rem;
+}
+
+.card-header {
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+/* Table styles */
+table {
+    border: 0px solid #ccc;
+    border-collapse: collapse;
+    background-color: #fff;
+    width: 100%; /* Ensures tables take full width */
+}
+
+table th {
+    background-color: #0d6efd;
+    color: #333;
+    font-weight: bold;
+    padding: 8px;
+}
+
+table th,
+table td {
+    padding: 8px; /* Ensures consistent padding */
+    border: 1px solid #ccc;
+    text-align: left; /* Aligns text to the left by default */
+}
+
+/* Add hover effect to table rows */
+table tr:hover {
+    background-color: #f2f2f2; /* Light gray background on hover */
+}
+
+/* Sidebar styles */
+#sidebar {
+    position: fixed;
+    top: 80px; /* Start below the banner */
+    left: 0;
+    height: calc(100% - 80px); /* Adjust height to account for the banner */
+    width: 200px;
+    background-color: #e6e6e6;
+    color: white;
+    padding-top: 20px;
+    overflow-x: hidden;
+    overflow-y: auto; /* Allow sidebar to scroll if content exceeds viewport height */
+    z-index: 1000; /* Ensure sidebar stays on top */
+}
+
+/* Sidebar link styles */
+#sidebar a {
+    padding: 6px 8px 6px 16px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 400;
+    text-align: left;
+    color: black;
+    display: block;
+}
+
+#sidebar a:hover {
+    color: #818181;
+}
+
+.submenu {
+    display: none; /* Initially hide submenu */
+    padding-left: 20px; /* Indent submenu items */
+}
+
+.submenu a {
+    padding: 5px 10px;
+    text-decoration: none;
+    color: #fff;
+    display: block;
+    font-size: 16px;
+}
+
+.submenu a:hover {
+    background-color: #495057; /* Darker shade on hover */
+}
+
+/* Banner styles */
+.banner-style {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%; /* Full width */
+    background: linear-gradient(169deg, rgba(21, 1, 42, 1) 45%, rgba(147, 9, 232, 1) 100%);
+    color: white;
+    height: 80px; /* Fixed height for the banner */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 1000; /* Ensure banner stays on top */
+    padding: 0 20px;
+}
+
+/* Content area styles */
+#content {
+    margin-left: 100px; /* Same width as sidebar */
+    margin-top: 80px; /* Same height as the banner */
+    padding: 20px;
+    overflow: auto; /* Ensure content scrolls properly */
+}
+
+/* Logo styles */
+.logo-style {
+    vertical-align: middle;
+    width: 150px;
+    height: auto;
+}
+
+/* Highlight difference styles */
+.highlight-difference {
+    background-color: #f8d7da;
+}
+
+/* Select2 styles */
+.select2-container .select2-selection--single .select2-selection__rendered {
+    line-height: 36px; /* Match the input height */
+}
+
+.select2-container .select2-selection--single .select2-selection__placeholder {
+    color: #999; /* Placeholder color */
+}
+
+.select2-container .select2-selection--single {
+    height: 36px; /* Adjust to match input */
+    display: flex;
+    align-items: center;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px; /* Adjust to match input */
+}
+
+/* DataTables styles */
+#comparisonTable_wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+#comparisonTable thead th {
+    text-align: center; /* Align headers */
+}
+
+#comparisonTable tbody td {
+    white-space: nowrap; /* Prevent text wrapping */
+}
+
+#comparisonTable th,
+#comparisonTable td {
+    padding: 8px 10px; /* Add padding for better visibility */
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    margin-left: 0.5em; /* Space between filter input and label */
+}
+
+/* Button group styles */
+.button-group {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.button-group .btn {
+    flex: 1;
+    max-width: 200px; /* Optional: set a max width */
+    margin: 0 5px; /* Add space between buttons */
+}
+
+/* DataTables button styles */
+div.dt-buttons {
+    float: right;
+    margin: 0 5px;
+}
+
+/* Custom autocomplete styles */
+.custom-autocomplete .ui-menu-item-wrapper {
+    font-size: 0.9rem; /* Change this to your desired font size */
+}
+
+.custom-autocomplete {
+    font-size: 8px; /* Change this to your desired font size */
+    font-family: monospace;
+}
+
+/* Hover text styles */
+.hover-text {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    padding: 5px;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+}
+/*
+.fa-info-circle:hover + .backend-details {
+    display: block;
+}
+
+.fa-info-circle {
+    cursor: pointer;
+}
+
+.backend-details {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    padding: 5px;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+    width: 200px;
+    white-space: pre-wrap;
+}
+
+.fas:hover .hover-text {
+    display: block;
+}
+*/
+
+.backend-details {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    padding: 5px;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+    width: 200px;
+    white-space: pre-wrap;
+}
+.fas:hover .hover-text {
+    display: block;
+}
+
+.fa-info-circle:hover + .backend-details {
+    display: block;
+}
+
+.fa-info-circle {
+    position: relative; /* Ensure parent for absolute positioning */
+    cursor: pointer;
+}
+/* Loader CSS */
+.loader {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #3cba54;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+    display: none; /* Initially hidden */
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.login-container {
+    max-width: 600px;
+    margin: 100px auto; /* Center the container */
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.login-form {
+    padding: 20px;
+}
+.login-image {
+    max-width: 100%;
+    height: auto;
+}
+
+
+
+
+
+  /* Reduce padding in table cells for a compact DataTable */
+.dataTable tr th,
+.dataTable tr td {
+    padding: 4px 8px; /* Adjust padding to reduce row height */
+    font-size: 0.875rem; /* Optional: smaller font size for compact display */
+    line-height: 1.2; /* Adjust line height */
+}
+
+/* Optional: Reduce height of the table header row */
+.dataTable thead th {
+    padding: 4px 8px;
+    font-size: 0.875rem; /* Make the header font size smaller to match */
+    line-height: 1.2;
+}
+
+/* Optional: Reduce the height of the table rows */
+.dataTable tr {
+    height: 28px; /* Adjust the height to your preference */
+}
+
+/* Optional: Adjust DataTable wrapper for a more compact view */
+.dataTables_wrapper .dataTables_paginate,
+.dataTables_wrapper .dataTables_info {
+    font-size: 0.875rem; /* Smaller font size for pagination and info */
+}
+
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    height: calc(1.5rem + 2px); /* Adjust the height of filter and length dropdown */
+    font-size: 0.875rem; /* Match the font size with table */
+    padding: 0.25rem 0.5rem; /* Adjust padding */
+}
+
+  /* Ensure the label floats correctly with Select2 */
+.form-floating > .select2-container--default .select2-selection--single {
+    height: calc(3.5rem + 2px); /* Adjust height to match input field */
+    padding-top: 1.625rem; /* Space for the floating label */
+    padding-left: 0.25rem; /* Add padding to align with label */
+}
+
+.form-floating > .select2-container--default .select2-selection--single .select2-selection__rendered {
+    font-size: medium;
+    line-height: 1.5; /* Match the line height with the input */
+}
+
+.form-floating > .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: calc(3.5rem + 2px); /* Align arrow with field */
+}
+
+.form-floating > .select2-container--default .select2-selection--single .select2-selection__placeholder {
+    margin-top: 0.625rem; /* Align placeholder text */
+}
+
