@@ -2964,3 +2964,442 @@ div.dt-buttons {
     margin-top: 0.625rem; /* Align placeholder text */
 }
 
+
+
+
+======================================
+
+
+
+
+
+/* General body styles */
+body {
+    font-family: Calibri, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #333;
+    background-color: #fff;
+    margin: 0;
+    padding: 0;
+}
+
+/* Container styles */
+.custom-container,
+.custom-main-container {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.container1 {
+    margin-left: 7% !important;
+    width: 90% !important;
+    box-sizing: border-box;
+}
+
+/* Sidebar styles */
+#sidebar {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    height: calc(100% - 80px);
+    width: 200px;
+    background-color: #e6e6e6;
+    color: white;
+    padding-top: 20px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+#sidebar a {
+    padding: 6px 8px 6px 16px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 400;
+    text-align: left;
+    color: black;
+    display: block;
+}
+
+#sidebar a:hover {
+    color: #818181;
+}
+
+.submenu {
+    display: none;
+    padding-left: 20px;
+}
+
+.submenu a {
+    padding: 5px 10px;
+    text-decoration: none;
+    color: #fff;
+    display: block;
+    font-size: 16px;
+}
+
+.submenu a:hover {
+    background-color: #495057;
+}
+
+/* Banner styles */
+.banner-style {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(169deg, rgba(21, 1, 42, 1) 45%, rgba(147, 9, 232, 1) 100%);
+    color: white;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 1000;
+    padding: 0 20px;
+}
+
+/* Content area styles */
+#content {
+    margin-left: 200px; /* Same width as sidebar */
+    margin-top: 80px;
+    padding: 20px;
+    overflow: auto;
+}
+
+/* Logo styles */
+.logo-style {
+    vertical-align: middle;
+    width: 150px;
+    height: auto;
+}
+
+/* Form styles */
+form {
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+/* Heading styles */
+h1, h2 {
+    color: #333;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+/* Button styles */
+.btn {
+    font-size: 0.9rem;
+    padding: 8px 16px;
+}
+
+.button-group {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+.button-group .btn {
+    flex: 1;
+    max-width: 200px;
+    margin: 0 5px;
+}
+
+/* Flash message styles */
+.flashes li.success {
+    color: green;
+    font-size: 0.9rem;
+}
+
+.flashes li.warning {
+    color: orange;
+    font-size: 0.9rem;
+}
+
+.flashes li.danger {
+    color: red;
+    font-size: 0.9rem;
+}
+
+/* Card styles */
+.card-body, .card-header {
+    font-size: 0.9rem;
+}
+
+.card-header {
+    font-weight: bold;
+}
+
+/* Table styles */
+table {
+    border-collapse: collapse;
+    background-color: #fff;
+    width: 100%;
+}
+
+table th, table td {
+    padding: 8px;
+    border: 1px solid #ccc;
+    text-align: left;
+}
+
+table th {
+    background-color: #0d6efd;
+    color: #333;
+    font-weight: bold;
+}
+
+table tr:hover {
+    background-color: #f2f2f2;
+}
+
+/* Select2 styles */
+.select2-container--default .select2-selection--single {
+    height: 36px;
+    display: flex;
+    align-items: center;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 36px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+}
+
+.select2-container--default .select2-results__options {
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.select2-container--default .select2-results__option {
+    line-height: 24px;
+    padding: 4px 8px;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    height: 24px;
+    padding: 4px 8px;
+}
+
+/* Floating label styles */
+.floating-label {
+    position: absolute;
+    top: 50%;
+    left: 0.75rem;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    pointer-events: none;
+    transition: all 0.2s ease-in-out;
+    color: #aaa;
+}
+
+.floating-label.active {
+    top: -0.75rem;
+    left: 0.5rem;
+    font-size: 0.75rem;
+    color: #495057;
+}
+
+/* DataTables styles */
+.dataTable tr th,
+.dataTable tr td {
+    padding: 4px 8px;
+    font-size: 0.875rem;
+    line-height: 1.2;
+}
+
+.dataTable thead th {
+    padding: 4px 8px;
+    font-size: 0.875rem;
+    line-height: 1.2;
+}
+
+.dataTable tr {
+    height: 28px;
+}
+
+.dataTables_wrapper .dataTables_paginate,
+.dataTables_wrapper .dataTables_info {
+    font-size: 0.875rem;
+}
+
+.dataTables_wrapper .dataTables_length select,
+.dataTables_wrapper .dataTables_filter input {
+    height: calc(1.5rem + 2px);
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Card styles for purple variant */
+.card-header, .modal-header, .btn-primary, .custom-button {
+    background-color: #6f42c1;
+    color: #fff;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+.card {
+    border: 1px solid #6f42c1;
+}
+
+.table-bordered th, .table-bordered td {
+    border-color: #6f42c1;
+}
+
+.table thead th {
+    background-color: #9c6cc1;
+    color: #fff;
+}
+
+.table tbody tr:nth-child(odd) {
+    background-color: #f3e5f5;
+}
+
+.table tbody tr:hover {
+    background-color: #e2d8e6;
+}
+
+/* Custom CSS for sidebar */
+.sidebar {
+    background-color: #9c6cc1;
+    color: #fff;
+    padding-top: 20px;
+    min-height: 100vh;
+}
+
+.sidebar a {
+    color: #fff;
+}
+
+.sidebar a:hover {
+    color: #f8f9fa;
+    text-decoration: none;
+}
+
+.sidebar .active {
+    background-color: #6f42c1;
+}
+
+/* Custom styles for the chat popup and icon */
+#nfrPopup {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: none;
+    z-index: 1000;
+    background-color: #fff;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    width: 300px;
+    min-height: 200px;
+    padding: 15px;
+}
+
+#nfrPopup.show {
+    display: block;
+}
+
+#nfrPopup .close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    cursor: pointer;
+}
+
+#nfrToggleBtn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1001;
+    width: 50px;
+    height: 50px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    font-size: 20px;
+    cursor: pointer;
+    outline: none;
+}
+
+#nfrToggleBtn:hover {
+    background-color: #0056b3;
+}
+
+#nfrToggleBtn:focus {
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+}
+
+#nfrContent {
+    margin-top: 15px;
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 768px) {
+    #sidebar {
+        display: none;
+    }
+
+    #content {
+        margin-left: 0;
+        margin-top: 60px;
+    }
+
+    .banner-style {
+        padding: 0 10px;
+    }
+
+    .card-body, .card-header {
+        font-size: 0.85rem;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-hide {
+        display: none;
+    }
+}
+
+@media (min-width: 1200px) {
+    body {
+        font-size: 16px; /* Adjust for larger screens */
+    }
+
+    .card-body, .card-header {
+        font-size: 1rem;
+    }
+}
+
+/* Handling different screen scaling settings */
+/* 100% scaling */
+@media (-webkit-min-device-pixel-ratio: 1), (min-resolution: 96dpi) {
+    /* Styles for 100% scaling can be adjusted here if needed */
+}
+
+/* 125% scaling */
+@media (-webkit-min-device-pixel-ratio: 1.25), (min-resolution: 120dpi) {
+    body {
+        font-size: 16px; /* Adjust font size for 125% scaling */
+    }
+}
+
+/* 150% scaling */
+@media (-webkit-min-device-pixel-ratio: 1.5), (min-resolution: 144dpi) {
+    body {
+        font-size: 18px; /* Adjust font size for 150% scaling */
+    }
+}
+
+
+
