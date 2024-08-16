@@ -1,3 +1,134 @@
+/* General DataTable Styling */
+.custom-table.dataTable {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.custom-table th {
+    background-color: gray;
+    border: 1px solid #333; /* Light black border */
+    font-weight: bold;
+    font-size: 10px;
+    padding: 8px;
+    text-align: left;
+}
+
+.custom-table td {
+    border: 1px solid #333; /* Light black border */
+    padding: 8px;
+    font-size: 10px;
+/*    font-size: 0.9em; */ /* 90% of the body font size */
+
+}
+
+.custom-table td:last-child {
+    text-align: center;
+    width: 50px; /* Adjust width as needed */
+}
+
+.custom-table.dataTable thead th {
+    background-color: #4CAF50; /* Green background for headers */
+    color: white; /* White text color */
+    padding: 10px; /* Padding around text */
+    text-align: left; /* Left-align text */
+
+}
+
+.custom-table.dataTable tbody tr:nth-child(even) {
+    background-color: #f2f2f2; /* Light grey background for even rows */
+}
+
+.custom-table.dataTable tbody tr:hover {
+    background-color: #ddd; /* Light grey background on hover */
+}
+
+.custom-table.dataTable td, .custom-table.dataTable th {
+    border: 1px solid #ddd; /* Light grey border around cells */
+    padding: 8px; /* Padding inside cells */
+}
+
+/* Pagination Controls */
+.custom-table_wrapper .dataTables_paginate .paginate_button {
+    padding: 6px 12px;
+    margin: 0 2px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #333;
+    background-color: #f9f9f9;
+}
+
+.custom-table_wrapper .dataTables_paginate .paginate_button:hover {
+    background-color: #ddd;
+}
+
+/* Search Input */
+.custom-table_wrapper .dataTables_filter input {
+    margin: 0;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Info Section */
+.custom-table_wrapper .dataTables_info {
+    margin: 10px 0;
+}
+
+/* Length Select */
+.custom-table_wrapper .dataTables_length select {
+    margin: 0;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+
+/* Edit and Delete Buttons */
+.custom-table .btn-edit, .custom-table .btn-delete {
+    padding: 5px 10px; /* Smaller size */
+    font-size: 0.9em; /* Slightly smaller text */
+    border: none;
+    border-radius: 4px;
+    color: white; /* Text color */
+    cursor: pointer;
+    margin: 2px; /* Space between buttons */
+}
+
+.custom-table .btn-edit {
+    background-color: #4CAF50; /* Green background for Edit */
+}
+
+.custom-table .btn-delete {
+    background-color: #f44336; /* Red background for Delete */
+}
+
+.custom-table .btn-edit:hover {
+    background-color: #45a049; /* Darker green on hover */
+}
+
+.custom-table .btn-delete:hover {
+    background-color: #e53935; /* Darker red on hover */
+}
+
+
+
+
+
+    <table id="example" class="custom-table display">
+
+
+
+
+
+
+
+
+
+
+----------------------
+
+
 <div class="col-md-3 d-flex justify-content-start">
                  <div class="form-floating mb-3 mt-3" style="width: 100%;">
                       <input class="form-control" id="transaction_name" placeholder="Enter email" name="transaction_name" type="text" style="width:90%; height: 36px; font-size: 1rem;" >
