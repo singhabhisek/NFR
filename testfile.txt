@@ -1,3 +1,97 @@
+
+/*ADDED NOW*/
+
+/* Apply a smaller font size to the Select2 container */
+.select2-container .select2-selection--single {
+    font-size: 12px; /* Change this value to your desired font size */
+}
+
+/* Apply a smaller font size to the dropdown options */
+.select2-dropdown .select2-results__option {
+    font-size: 12px; /* Change this value to your desired font size */
+}
+
+.select2-container .select2-selection--single .select2-selection__rendered {
+    font-size: 12px !important; /* Adjust this value to your desired font size */
+}
+
+/* General DataTable Styling */
+.custom-table.dataTable {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.custom-table.dataTable thead th {
+    background-color: #4CAF50; /* Green background for headers */
+    color: white; /* White text color */
+    padding: 10px; /* Padding around text */
+    text-align: center; /* Left-align text */
+}
+
+.custom-table.dataTable tbody tr:nth-child(even) td {
+    background-color: #f2f2f2 !important; /* Light grey background for even rows */
+}
+.custom-table.dataTable tbody tr:nth-child(odd) td{
+    background-color: #ffffff !important; /* White for odd rows */
+}
+
+.custom-table.dataTable tbody tr:hover {
+    background-color: #ddd; /* Light grey background on hover */
+}
+
+.custom-table.dataTable td, .custom-table.dataTable th {
+    border: 1px solid #ddd; /* Light grey border around cells */
+    padding: 8px; /* Padding inside cells */
+}
+
+
+.custom-table.dataTable td:last-child {
+    text-align: center;
+}
+
+
+/* Pagination Controls */
+.custom-table_wrapper .dataTables_paginate .paginate_button {
+    padding: 6px 12px;
+    margin: 0 2px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #333;
+    background-color: #f9f9f9;
+}
+
+.custom-table_wrapper .dataTables_paginate .paginate_button:hover {
+    background-color: #ddd;
+}
+
+/* Search Input */
+.custom-table_wrapper .dataTables_filter input {
+    margin: 0;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Info Section */
+.custom-table_wrapper .dataTables_info {
+    margin: 10px 0;
+}
+
+/* Length Select */
+.custom-table_wrapper .dataTables_length select {
+    margin: 0;
+    padding: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+
+
+========================
+
+
+
 /* General DataTable Styling */
 .custom-table.dataTable {
     border-collapse: collapse;
