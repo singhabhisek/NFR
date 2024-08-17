@@ -1,4 +1,152 @@
+/project-root
+├── app.py
+├── static
+│   ├── fonts
+│   │   └── OpenSans.ttf
+└── templates
+    └── index.html
 
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/static/fonts/OpenSans.ttf') format('truetype');
+}
+
+body {
+    font-family: 'Open Sans', sans-serif;
+}
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select2 Dropdown with Floating Label</title>
+    <!-- Include Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Include Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="form-floating">
+    <input type="text" id="floatingInput" placeholder=" " class="form-control">
+    <label for="floatingInput">Text Input</label>
+</div>
+
+<!-- Select2 Dropdown with Floating Label -->
+<div class="form-floating">
+    <select id="exampleSelect" class="form-control-custom" style="width: 100%;">
+        <option value="" selected hidden>Select an option</option>
+        <option value="1">Option 1</option>
+        <option value="2">Option 2</option>
+        <option value="3">Option 3</option>
+    </select>
+    <label for="exampleSelect">Application Name</label>
+</div>
+
+<!-- Include jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Include Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+
+<!-- Initialize Select2 -->
+<script>
+$(document).ready(function() {
+    $('#exampleSelect').select2();
+});
+</script>
+
+</body>
+</html>
+
+
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+.form-floating {
+    position: relative;
+    margin-bottom: 1rem;
+}
+
+
+
+.form-floating .form-control-custom {
+    display: block;
+    width: 100%;
+    padding: 1rem 0.75rem 0.25rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.25;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    background-color: #fff;
+    box-sizing: border-box;
+    appearance: none;
+    height: calc(3.5rem + 2px);
+}
+
+.form-floating select.form-control-custom {
+    padding-top: 1rem;
+    padding-bottom: 0.25rem;
+    height: calc(3.5rem + 2px);
+    background-size: 8px 10px;
+}
+
+.form-floating label {
+    position: absolute;
+    top: 1.75rem;
+    left: 0.75rem;
+    padding: 0 0.25rem;
+    transition: all 0.1s ease-in-out;
+    background-color: #fff;
+    pointer-events: none;
+    transform-origin: 0 0;
+    color: #6c757d;
+	font-size: 14px; /* Set the font size of the floating label to 10px */
+	font-weight: bold;
+}
+
+.form-floating .form-control-custom:focus ~ label,
+.form-floating select.form-control-custom:not([value=""]) ~ label {
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem);
+    opacity: 0.65;
+}
+
+.form-floating .form-control-custom:focus,
+.form-floating select.form-control-custom:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.form-floating .form-control-custom {
+    background-color: #fff;
+}
+
+
+.select2-container--default .select2-selection--single {
+    height: 3.5rem; /* Increased height */
+    padding: 1.5rem 0.75rem; /* Adjusted padding to align text correctly */
+    font-size: 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    box-sizing: border-box;
+	font-size: 10px; /* Set font size of the displayed option to 10px */
+}
+
+.select2-results__option {
+    font-size: 10px; /* Set font size of the result options to 10px */
+}
+
+
+
+///////////////////////////////////////////////////////////////////
 /*ADDED NOW*/
 
 /* Apply a smaller font size to the Select2 container */
