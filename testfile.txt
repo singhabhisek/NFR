@@ -1,3 +1,124 @@
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+.form-container {
+    width: 90%;
+    max-width: 1200px; /* Optional: sets a maximum width for larger screens */
+    margin: 0 auto; /* Center the container */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Automatically fit controls */
+    gap: 1rem; /* Space between controls */
+}
+
+.form-floating {
+    position: relative;
+}
+
+.form-floating .form-control,
+.form-floating .form-control-custom {
+    display: block;
+    width: 100%;
+    padding: 1rem 0.75rem 0.25rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.25;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    background-color: #fff;
+    box-sizing: border-box;
+    height: 3rem; /* Set consistent height */
+}
+
+.form-floating label {
+    position: absolute;
+    top: 1.5rem;
+    left: 0.75rem;
+    padding: 0 0.25rem;
+    transition: all 0.1s ease-in-out;
+    background-color: #fff;
+    pointer-events: none;
+    transform-origin: 0 0;
+    color: #6c757d;
+}
+
+.form-floating .form-control:focus ~ label,
+.form-floating .form-control:not([value=""]) ~ label,
+.form-floating select.form-control-custom:focus ~ label,
+.form-floating select.form-control-custom:not([value=""]) ~ label {
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem);
+    opacity: 0.65;
+}
+
+.form-floating .form-control:focus,
+.form-floating select.form-control-custom:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.select2-container--default .select2-selection--single {
+    height: 3rem; /* Height of the dropdown */
+    padding: 0 0.75rem; /* Remove default padding to align text correctly */
+    font-size: 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center; /* Vertically center the content */
+	padding-top: 8px; /* Adjust dropdown position */
+    
+}
+
+.select2-container .select2-selection--single .select2-selection__rendered{
+	padding-top:10px;
+	padding-left:5px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100%; /* Full height */
+    display: flex;
+    align-items: center; /* Vertically center the arrow */
+    right: 0.75rem; /* Adjust to ensure it’s positioned correctly */
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-width: 5px; /* Adjust arrow thickness */
+}
+
+
+.select2-container--default .select2-dropdown {
+    font-size: 0.9rem; /* Set font size for dropdown options */
+}
+
+.select2-container--default .select2-results__option {
+    font-size: 0.9rem; /* Set font size for dropdown results */
+}
+
+
+/* CSS for jQuery UI Autocomplete */
+.ui-autocomplete {
+    font-size: 0.9rem; /* Set font size for auto-suggest dropdown */
+    border: 1px solid #ced4da; /* Match border with other inputs */
+    border-radius: 0.25rem; /* Match border-radius with other inputs */
+    box-sizing: border-box;
+    max-height: 200px; /* Set maximum height to handle long lists */
+    overflow-y: auto; /* Enable scrolling if content is too long */
+}
+
+.ui-menu-item {
+    padding: 0.5rem; /* Adjust padding for list items */
+    line-height: 1.25;
+}
+
+.ui-menu-item:hover {
+    background-color: #f1f1f1; /* Add hover effect */
+}
+
+
+====================
+
 /project-root
 ├── app.py
 ├── static
