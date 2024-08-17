@@ -1,3 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+        <title>{% block title %}NFR Portal{% endblock %}</title>
+
+        <!-- External CSS -->
+        <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" rel="stylesheet" />
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" rel="stylesheet" />
+        <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet" />
+        <link href="https://cdn.datatables.net/buttons/2.2.3/css/buttons.dataTables.min.css" rel="stylesheet" type="text/css" />
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/fontawesome.min.css" rel="stylesheet" />
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+        <!-- jQuery -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/buttons/2.2.3/js/dataTables.buttons.min.js" type="text/javascript"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js" type="text/javascript"></script>
+        <script src="https://cdn.datatables.net/buttons/2.2.3/js/buttons.html5.min.js" type="text/javascript"></script>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet" />
+
+        <style>
+            #sidebar a {
+                display: block;
+                color: #333;
+                text-decoration: none;
+                padding: 10px 15px;
+                border-radius: 4px;
+                transition: background-color 0.3s, color 0.3s;
+            }
+
+            #sidebar a:hover, #sidebar a.active {
+                background-color: #007bff;
+                color: #fff;
+            }
+
+            #sidebar a i {
+                margin-right: 10px;
+            }
+
+            .submenu {
+                display: none;
+                margin-top: 10px;
+                padding-left: 15px;
+            }
+
+            .submenu-toggle.active + .submenu {
+                display: block;
+            }
+
+            #sidebar a.submenu-toggle {
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            #sidebar a.submenu-toggle:hover {
+                background-color: #e2e6ea;
+            }
+
+            #sidebar a.submenu-toggle i {
+                margin-right: 10px;
+            }
+
+            #sidebar a.submenu-toggle.active {
+                background-color: #e2e6ea;
+                color: #333;
+            }
+
+            .submenu a.active {
+                color: #007bff;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="sidebar">
+            <a href="/" title="Home"><i class="bi bi-house-door-fill"></i>&ensp; Home</a>
+            {% if user and user['role'] == 'admin' %}
+            <a href="/compare" title="CompareB"> <i class="bi bi-arrow-left-right"></i>&ensp; Compare </a>
+            {% endif %}
+            {% if user and user['role'] == 'admin' %}
+            <a href="/upload" title="Upload"><i class="fa fa-upload"></i>&ensp; Upload</a>
+            {% endif %}
+            <a href="/discrepancy" title="Discrepancy"><i class="fa fa-cog"></i>&ensp; Discrepancy</a>
+            <a href="/upload_dependency" title="Upload Dependency"><i class="fa fa-cog"></i>&ensp; Upload Dependency</a>
+            <a class="submenu-toggle" href="#">Advanced <i class="fas fa-caret-right"></i></a>
+            <div class="submenu">
+                <a href="#" class="submenu-item">Upload Discrepancy</a>
+                <a href="/login" title="Login"><i class="fa fa-cog"></i>&ensp; Login</a>
+            </div>
+        </div>
+        <div class="custom-container" id="content">
+            <div class="banner-style">
+                <img alt="Logo" class="logo-style" src="{{ url_for('static', filename='truist-logo-purple.svg') }}" />
+                <div style="position: absolute; top: 15px; left: 160px; color: rgba(255, 255, 255, 0.5); font-size: 24px; margin: 0;">
+                    |
+                </div>
+                <div style="position: absolute; display: inline; padding-left: 200px; justify-content: center;">
+                    <p class="banner-title">Performance Engineering Services</p>
+                    <p class="banner-title" style="line-height: 20px;">NON-FUNCTIONAL REQUIREMENT MGMT (NFR) PORTAL</p>
+                </div>
+                <div style="position: relative !important; padding-left: 0px !important; right: 20px; top: 50%; transform: translateY(-50%);">
+                        <p class="banner-title">Welcome {{user['userid']}} -  {{user['role']}}</p>
+                    <p class="banner-title">Click <a href="Dashboard" style="color: white;" target="_blank">here for help</a></p>
+                </div>
+            </div>
+            <div class="custom-main-container" id="main-content">
+                {% block content %} {% endblock %}
+            </div>
+        </div>
+        <script>
+
+
+        $(document).ready(function () {
+    // Handle submenu toggling
+    $(".submenu-toggle").click(function (e) {
+        e.preventDefault();
+
+        // Check if the submenu is already visible
+        if ($(this).next(".submenu").is(":visible")) {
+            // If it is visible, hide it and remove the active class
+            $(this).removeClass("active");
+            $(this).next(".submenu").slideUp();
+        } else {
+            // If it's not visible, show it and add the active class
+            $(this).addClass("active");
+            $(this).next(".submenu").slideDown();
+        }
+    });
+
+    // Mark active submenu item based on current path
+    var currentPath = window.location.pathname;
+    $(".submenu a").each(function () {
+        if ($(this).attr('href') === currentPath) {
+            $(this).addClass('active');
+            $(this).closest('.submenu').slideDown();
+            $(this).closest('.submenu').prev('.submenu-toggle').addClass('active');
+        }
+    });
+});
+
+
+
+
+
+<!--            $(document).ready(function () {-->
+<!--                // Handle submenu toggling-->
+<!--                $(".submenu-toggle").click(function (e) {-->
+<!--                    e.preventDefault();-->
+<!--                    $(this).toggleClass("active");-->
+<!--                    $(this).next(".submenu").slideToggle();-->
+<!--                });-->
+
+<!--                // Mark active submenu item based on current path-->
+<!--                var currentPath = window.location.pathname;-->
+<!--                $(".submenu a").each(function () {-->
+<!--                    if ($(this).attr('href') === currentPath) {-->
+<!--                        $(this).addClass('active');-->
+<!--                        $(this).closest('.submenu').slideDown();-->
+<!--                        $(this).closest('.submenu').prev('.submenu-toggle').addClass('active');-->
+<!--                    }-->
+<!--                });-->
+<!--            });-->
+        </script>
+    </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+=====================
+
+
 
 body {
     font-family: Arial, sans-serif;
