@@ -21,6 +21,196 @@ body {
 .form-floating .form-control-custom {
     display: block;
     width: 100%;
+    padding: 0 0.75rem !important; /* Adjust padding for consistency */
+    font-size: 0.9rem !important; /* Set font size */
+    line-height: 1.25;
+    border: 1px solid #ced4da !important;
+    border-radius: 0.25rem !important;
+    background-color: #fff !important;
+    box-sizing: border-box;
+    height: 3rem !important; /* Set consistent height */
+}
+
+.form-floating label {
+    position: absolute;
+    top: 0.5rem !important; /* Adjust label position */
+    left: 0.75rem !important;
+    padding: 0 0.25rem !important;
+    transition: all 0.1s ease-in-out;
+    background-color: #fff !important;
+    pointer-events: none;
+    transform-origin: 0 0;
+    color: #6c757d !important;
+    font-size: 0.9rem !important; /* Set font size */
+}
+
+.form-floating .form-control:focus ~ label,
+.form-floating .form-control:not([value=""]) ~ label,
+.form-floating select.form-control-custom:focus ~ label,
+.form-floating select.form-control-custom:not([value=""]) ~ label {
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem) !important;
+    opacity: 0.65 !important;
+}
+
+.form-floating .form-control:focus,
+.form-floating select.form-control-custom:focus {
+    border-color: #86b7fe !important;
+    outline: 0 !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+.select2-container--default .select2-selection--single {
+    height: 3rem !important; /* Height of the dropdown */
+    padding: 0 0.75rem !important; /* Remove default padding to align text correctly */
+    font-size: 0.9rem !important; /* Set font size */
+    border: 1px solid #ced4da !important;
+    border-radius: 0.25rem !important;
+    box-sizing: border-box;
+    display: flex !important;
+    align-items: center !important; /* Vertically center the content */
+    margin-top: 5px !important; /* Adjust dropdown position */
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100% !important; /* Full height */
+    display: flex !important;
+    align-items: center !important; /* Vertically center the arrow */
+    right: 0.75rem !important; /* Adjust to ensure it’s positioned correctly */
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-width: 2px !important; /* Adjust arrow thickness */
+}
+
+.select2-container--default .select2-dropdown {
+    font-size: 0.9rem !important; /* Set font size for dropdown options */
+}
+
+.select2-container--default .select2-results__option {
+    font-size: 0.9rem !important; /* Set font size for dropdown results */
+}
+
+/* CSS for jQuery UI Autocomplete */
+.ui-autocomplete {
+    font-size: 0.9rem !important; /* Set font size for auto-suggest dropdown */
+    border: 1px solid #ced4da !important; /* Match border with other inputs */
+    border-radius: 0.25rem !important; /* Match border-radius with other inputs */
+    box-sizing: border-box;
+    max-height: 200px !important; /* Set maximum height to handle long lists */
+    overflow-y: auto !important; /* Enable scrolling if content is too long */
+}
+
+.ui-menu-item {
+    padding: 0.5rem !important; /* Adjust padding for list items */
+    line-height: 1.25 !important;
+}
+
+.ui-menu-item:hover {
+    background-color: #f1f1f1 !important; /* Add hover effect */
+}
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Layout</title>
+    <!-- Include Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <!-- Include Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="form-container">
+    <div class="form-floating">
+        <select id="dropdown1" class="form-control-custom">
+            <option value="" selected hidden>Select an option 1</option>
+            <option value="1">Option 1</option>
+            <option value="2">Option 2</option>
+            <option value="3">Option 3</option>
+        </select>
+        <label for="dropdown1">Dropdown 1</label>
+    </div>
+    <div class="form-floating">
+        <select id="dropdown2" class="form-control-custom">
+            <option value="" selected hidden>Select an option 2</option>
+            <option value="1">Option 1</option>
+            <option value="2">Option 2</option>
+            <option value="3">Option 3</option>
+        </select>
+        <label for="dropdown2">Dropdown 2</label>
+    </div>
+    <div class="form-floating">
+        <select id="dropdown3" class="form-control-custom">
+            <option value="" selected hidden>Select an option 3</option>
+            <option value="1">Option 1</option>
+            <option value="2">Option 2</option>
+            <option value="3">Option 3</option>
+        </select>
+        <label for="dropdown3">Dropdown 3</label>
+    </div>
+    <div class="form-floating">
+        <select id="dropdown4" class="form-control-custom">
+            <option value="" selected hidden>Select an option 4</option>
+            <option value="1">Option 1</option>
+            <option value="2">Option 2</option>
+            <option value="3">Option 3</option>
+        </select>
+        <label for="dropdown4">Dropdown 4</label>
+    </div>
+    <div class="form-floating">
+        <input type="text" id="textInput" placeholder=" " class="form-control">
+        <label for="textInput">Text Input</label>
+    </div>
+</div>
+
+<!-- Include jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Include Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- Initialize Select2 -->
+<script>
+$(document).ready(function() {
+    $('#dropdown1').select2();
+    $('#dropdown2').select2();
+    $('#dropdown3').select2();
+    $('#dropdown4').select2();
+});
+</script>
+
+</body>
+</html>
+
+
+--------------------------
+
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+.form-container {
+    width: 90%;
+    max-width: 1200px; /* Optional: sets a maximum width for larger screens */
+    margin: 0 auto; /* Center the container */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Automatically fit controls */
+    gap: 1rem; /* Space between controls */
+}
+
+.form-floating {
+    position: relative;
+}
+
+.form-floating .form-control,
+.form-floating .form-control-custom {
+    display: block;
+    width: 100%;
     padding: 1rem 0.75rem 0.25rem 0.75rem;
     font-size: 1rem;
     line-height: 1.25;
