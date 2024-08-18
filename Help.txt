@@ -169,3 +169,67 @@
     <h3>Features</h3>
     <ul>
         <li><strong>Dependency Mapping</
+
+
+
+<ul>
+        <li><strong>Dependency Mapping</strong>: Helps visualize and manage service dependencies.</li>
+        <li><strong>File Upload</strong>: Users can upload CSV files that define service dependencies.</li>
+        <li><strong>Validation</strong>: The system checks for file format compliance and highlights errors.</li>
+    </ul>
+
+    <h3>Mandatory Fields</h3>
+    <p>The uploaded CSV file must include the following columns:</p>
+    <ul>
+        <li><strong>ServiceName</strong>: The name of the service.</li>
+        <li><strong>DependentService</strong>: The service that depends on the primary service.</li>
+        <li><strong>DependencyType</strong>: Type of dependency (e.g., "critical", "optional").</li>
+    </ul>
+
+    <h3>Possible Values</h3>
+    <ul>
+        <li><strong>ServiceName</strong>: Names must match those used in the platform.</li>
+        <li><strong>DependentService</strong>: Similarly, these should be valid service names.</li>
+        <li><strong>DependencyType</strong>: Examples include "critical", "optional", or "required".</li>
+    </ul>
+
+    <h3>Controls</h3>
+    <ul>
+        <li><strong>Upload Button</strong>: Starts the upload process.</li>
+        <li><strong>Validation Results</strong>: Displays errors found in the uploaded file.</li>
+    </ul>
+
+    <hr>
+
+    <h2 id="user-access-management">6. User Access Management</h2>
+
+    <h3>Overview</h3>
+    <p>The User Access Management screen allows administrators to manage user permissions and roles within the platform.</p>
+
+    <h3>Features</h3>
+    <ul>
+        <li><strong>User Roles</strong>: Assign different roles to users, such as "Admin", "Editor", or "Viewer".</li>
+        <li><strong>Access Controls</strong>: Define which parts of the platform each role can access.</li>
+        <li><strong>Audit Trail</strong>: Track changes made to user roles and permissions.</li>
+    </ul>
+
+    <h3>Mandatory Fields</h3>
+    <ul>
+        <li><strong>User ID</strong>: Required to assign roles and permissions.</li>
+        <li><strong>Role</strong>: Required to define user access level.</li>
+    </ul>
+
+    <h3>Possible Values</h3>
+    <ul>
+        <li><strong>Roles</strong>: Examples include "Admin", "Editor", "Viewer".</li>
+        <li><strong>Permissions</strong>: Define specific access levels for each role.</li>
+    </ul>
+
+    <h3>Controls</h3>
+    <ul>
+        <li><strong>Assign Role Button</strong>: Assigns the selected role to a user.</li>
+        <li><strong>Audit Log Button</strong>: Opens the audit trail for review.</li>
+    </ul>
+
+</body>
+</html>
