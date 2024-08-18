@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFR InsightIQ Website Help Guide</title>
+</head>
+<body>
+
+    <h1>NFR InsightIQ Website Help Guide</h1>
+
+    <h2>Overview</h2>
+    <p>The NFR InsightIQ platform provides a comprehensive suite of tools and dashboards for managing and analyzing non-functional requirements (NFRs). This guide will walk you through the functionalities of the various screens within the platform, as well as explain the different controls and their potential meanings.</p>
+
+    <h2>Table of Contents</h2>
+    <ol>
+        <li><a href="#landing-page-dashboard">Landing Page – Dashboard</a></li>
+        <li><a href="#compare-releases">Compare Releases</a></li>
+        <li><a href="#discrepancy-search-in-sla">Discrepancy Search in SLA</a></li>
+        <li><a href="#upload-nfr-screen">Upload NFR Screen</a></li>
+        <li><a href="#file-service-dependency-upload-screen">File Service Dependency Upload Screen</a></li>
+        <li><a href="#user-access-management">User Access Management</a></li>
+    </ol>
+
+    <hr>
+
+    <h2 id="landing-page-dashboard">1. Landing Page – Dashboard</h2>
+
+    <h3>Overview</h3>
+    <p>The Landing Page serves as the main dashboard upon logging in. It provides a summary of key metrics and quick links to other parts of the platform.</p>
+
+    <h3>Features</h3>
+    <ul>
+        <li><strong>Key Metrics</strong>: Displays crucial information related to NFRs, such as compliance status and recent updates.</li>
+        <li><strong>Quick Navigation</strong>: Offers easy access to commonly used screens like Compare Releases, Upload NFR Screen, and User Access Management.</li>
+        <li><strong>Search Bar</strong>: Allows users to search for specific data across the platform.</li>
+    </ul>
+
+    <h3>Mandatory Fields</h3>
+    <ul>
+        <li><strong>Search Bar</strong>: A keyword is required to perform a search.</li>
+    </ul>
+
+    <h3>Possible Values</h3>
+    <ul>
+        <li><strong>Search Keywords</strong>: Terms related to NFRs, release names, or specific SLA identifiers.</li>
+    </ul>
+
+    <h3>Controls</h3>
+    <ul>
+        <li><strong>Dashboard Widgets</strong>: Interactive elements showing real-time data on NFRs.</li>
+        <li><strong>Navigation Menu</strong>: Provides easy access to different sections of the platform.</li>
+    </ul>
+
+    <hr>
+
+    <h2 id="compare-releases">2. Compare Releases</h2>
+
+    <h3>Overview</h></p>
+    <p>The Compare Releases screen allows users to compare NFR data between different software releases.</p>
+
+    <h3>Features</h3>
+    <ul>
+        <li><strong>Release Selection</strong>: Users can select specific software versions to compare.</li>
+        <li><strong>Comparison Results</strong>: Provides a detailed view of differences in NFRs between the selected releases.</li>
+        <li><strong>Export Option</strong>: Allows users to export comparison results.</li>
+    </ul>
+
+    <h3>Mandatory Fields</h3>
+    <ul>
+        <li><strong>Release 1</strong>: Required to select the first software release version.</li>
+        <li><strong>Release 2</strong>: Required to select the second software release version.</li>
+    </ul>
+
+    <h3>Possible Values</h3>
+    <ul>
+        <li><strong>Release Versions</strong>: Examples include "v1.0," "v1.1," etc.</li>
+    </ul>
+
+    <h3>Controls</h3>
+    <ul>
+        <li><strong>Release Dropdowns</strong>: Select the software versions for comparison.</li>
+        <li><strong>Compare Button</strong>: Initiates the comparison process.</li>
+        <li><strong>Export Button</strong>: Allows downloading the comparison results in various formats (e.g., CSV).</li>
+    </ul>
+
+    <hr>
+
+    <h2 id="discrepancy-search-in-sla">3. Discrepancy Search in SLA</h2>
+
+    <h3>Overview</h3>
+    <p>The Discrepancy Search in SLA screen helps users identify discrepancies in Service Level Agreements (SLAs) related to NFRs.</p>
+
+    <h3>Features</h3>
+    <ul>
+        <li><strong>Search Filters</strong>: Allows users to apply various filters to narrow down search results.</li>
+        <li><strong>Discrepancy Results</strong>: Displays identified discrepancies based on selected criteria.</li>
+        <li><strong>Detailed View</strong>: Offers more information on selected discrepancies. Click on any discrepancy to view more details, including the potential impact on the SLA.</li>
+    </ul>
+
+    <h3>Mandatory Fields</h3>
+    <ul>
+        <li><strong>NFR Details</strong>: Selecting an NFR detail to compare is mandatory.</li>
+    </ul>
+
+    <h3>Possible Values</h3>
+    <ul>
+        <li><strong>NFR Details</strong>: Could include categories like Application, Release, or Transactions.</li>
+    </ul>
+
+    <h3>Controls</h3>
+    <ul>
+        <li><strong>Search Button</strong>: Executes the search based on the provided filters.</li>
+        <li><strong>Filter Options</strong>: Include date ranges, NFR categories, and severity levels.</li>
+        <li><strong>Details Button</strong>: Opens a detailed view of the selected discrepancy.</li>
+    </ul>
+
+    <hr>
+
+    <h2 id="upload-nfr-screen">4. Upload NFR Screen</h2>
+
+    <h3>Overview</h3>
+    <p>The Upload NFR Screen allows users to upload NFR data files into the platform.</p>
+
+    <h3>Features</h3>
+    <ul>
+        <li><strong>File Upload</strong>: Users can drag-and-drop or select files to upload.</li>
+        <li><strong>Validation</strong>: The system automatically checks the uploaded files for format compliance, ensuring that all required fields are present and correctly formatted.</li>
+        <li><strong>Upload History</strong>: Tracks the status and history of previous uploads, allowing users to review and troubleshoot as necessary.</li>
+    </ul>
+
+    <h3>Mandatory Fields</h3>
+    <p>The following fields must be present and correctly filled out in the uploaded NFR file:</p>
+    <ul>
+        <li><strong>ApplicationName</strong>: Required. The name of the application (e.g., "Mobile").</li>
+        <li><strong>ReleaseID</strong>: Required. The identifier for the release (e.g., "R2023").</li>
+        <li><strong>BusinessScenario</strong>: Required. Describes the business scenario being tested.</li>
+        <li><strong>TransactionName</strong>: Required. The name of the transaction associated with the NFR.</li>
+        <li><strong>SLA</strong>: Required. The Service Level Agreement time in seconds.</li>
+        <li><strong>TPS</strong>: Required. Transactions per second, representing the throughput.</li>
+        <li><strong>Comments</strong>: Optional. Any additional notes or remarks.</li>
+    </ul>
+
+    <h3>Possible Values</h3>
+    <ul>
+        <li><strong>ApplicationName</strong>: Must match the exact name recognized by the platform.</li>
+        <li><strong>ReleaseID</strong>: Format "YYYY.MM" (e.g., "R2023").</li>
+        <li><strong>BusinessScenario</strong>: Descriptive name for the business process.</li>
+        <li><strong>TransactionName</strong>: Concise transaction name, ideally structured.</li>
+        <li><strong>SLA</strong>: Numeric values representing time in seconds.</li>
+        <li><strong>TPS</strong>: Numeric values representing transaction throughput.</li>
+        <li><strong>Comments</strong>: Free text for any relevant additional information.</li>
+    </ul>
+
+    <h3>Controls</h3>
+    <ul>
+        <li><strong>Upload Button</strong>: Starts the file upload process. The system validates the data and provides feedback on any issues.</li>
+        <li><strong>Validation Results</strong>: Displays errors or warnings found during validation.</li>
+        <li><strong>History Log</strong>: View previous uploads with timestamps, statuses, and issues encountered.</li>
+    </ul>
+
+    <hr>
+
+    <h2 id="file-service-dependency-upload-screen">5. File Service Dependency Upload Screen</h2>
+
+    <h3>Overview</h3>
+    <p>The File Service Dependency Upload Screen allows users to upload files describing dependencies between different services.</p>
+
+    <h3>Features</h3>
+    <ul>
+        <li><strong>Dependency Mapping</
