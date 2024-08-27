@@ -1,3 +1,56 @@
+// Export to Excel button click event handler
+$('#export-excel').on('click', function() {
+    // Retrieve the application name and release ID from the dropdowns
+    var applicationName = $('#application-dropdown').val().trim(); // Assuming dropdown with ID `application-dropdown`
+    var releaseId = $('#release-dropdown').val().trim(); // Assuming dropdown with ID `release-dropdown`
+
+    // Get the current date and time
+    var currentDateTime = new Date();
+    var formattedDateTime = currentDateTime.toISOString().slice(0, 19).replace(/[-T:]/g, ''); // Format: YYYYMMDDHHMMSS
+
+    // Create a new workbook and worksheet
+    var wb = XLSX.utils.book_new();
+    var ws_data = [];
+
+    // Get table headers and determine which columns to exclude
+    var headers = $('#records-table th');
+    var headerRow = [];
+    var excludeIndices = [];
+
+    headers.each(function(index) {
+        var headerText = $(this).text().trim();
+        if (headerText === 'ID' || headerText === 'Actions') {
+            excludeIndices.push(index); // Collect indices to exclude
+        } else {
+            headerRow.push({ v: headerText, s: { font: { bold: true } } }); // Bold header text
+        }
+    });
+    ws_data.push(headerRow);
+
+    // Get table rows and exclude the specified columns
+    $('#records-table tbody tr').each(function() {
+        var rowData = [];
+        $(this).find('td').each(function(index) {
+            if (!excludeIndices.includes(index)) {
+                rowData.push($(this).text().trim());
+            }
+        });
+        ws_data.push(rowData);
+    });
+
+    // Convert the data to worksheet and append to the workbook
+    var ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, 'Records');
+
+    // Construct the filename using the application name, release ID, and current datetime
+    var fileName = applicationName + '_' + releaseId + '_' + formattedDateTime + '.xlsx';
+
+    // Write the workbook to a file
+    XLSX.writeFile(wb, fileName);
+});
+
+
+------------------------------------------
 
 
 document.getElementById('clear-cookies-btn').addEventListener('click', function() {
