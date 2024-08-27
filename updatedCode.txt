@@ -1,3 +1,48 @@
+
+
+document.getElementById('clear-cookies-btn').addEventListener('click', function() {
+                const cookieName = 'main_search';  // Replace with the actual cookie name
+
+                fetch('/clear_searches', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cookie_name: cookieName })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Clear the list in the modal
+                        document.getElementById('recent-searches-list').innerHTML = '';
+                        alert('Recent searches cleared successfully.');
+                    } else {
+                        alert('Failed to clear recent searches.');
+                    }
+                });
+            });
+
+
+
+@app.route('/clear_searches', methods=['POST'])
+def clear_searches():
+    data = request.json
+    cookie_name = data.get('cookie_name')
+
+    if not cookie_name:
+        return jsonify({'status': 'error', 'message': 'No cookie name provided'}), 400
+
+    response = make_response(jsonify({'status': 'success'}))
+    response.set_cookie(cookie_name, '', expires=0)  # Clear the cookie by setting it to an empty value with an expired date
+    return response
+
+
+
+
+---------------------------
+
+
+
 data: $('#edit-form').serialize(),
                     success: function(data) {
                         if (data.success) {
