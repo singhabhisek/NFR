@@ -1,3 +1,334 @@
+{% extends "base.html" %} 
+{% block title %}Dashboard{% endblock %}
+
+<meta charset="UTF-8" />
+<meta content="width=device-width, initial-scale=1.0" name="viewport" />
+<title>NFR Portal</title>
+
+{% block content %}
+<style>
+    div.dt-buttons {
+        float: right;
+        margin: 0 5px;
+    }
+    /* Add your additional custom styles here */
+</style>
+
+<div class="container1">
+    <div class="card card-header">
+        Search Criteria
+    </div>
+
+    <form class="card card-body" id="nfr-form">
+        <div class="form-row form-inline justify-content-center">
+            <div class="col-md-3 d-flex justify-content-end">
+                <div class="form-floating" style="width: 100%;">
+                    <select class="select2 form-control form-control-sm" id="application_name" data-placeholder="Select Application" aria-label="Floating label select example" name="application_name" style="width: 80%;">
+                        <option value="">Select Application</option>
+                        {% for app in apps %}
+                        <option value="{{ app['applicationName'] }}">{{ app['applicationName'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="application_name">Application Name:</label>&emsp;
+                </div>
+            </div>
+            <div class="col-md-3 d-flex justify-content-center">
+                <div class="form-floating" style="width: 100%;">
+                    <select class="select2 form-control" data-placeholder="Select Release" id="release_id" name="release_id" style="width: 80%;">
+                        <option value="">Release Name</option>
+                    </select>
+                    <label for="release_id">Select Release:</label>&emsp;
+                </div>
+            </div>
+            <div class="col-md-3 d-flex justify-content-start">
+                <div class="form-floating" style="width: 100%;">
+                    <input class="form-control" id="transaction_name" name="transaction_name" style="width:90%; height: 36px; font-size: 1rem;" type="text" />
+                    <label for="transaction_name">Type Transaction Name:</label>&emsp;
+                </div>
+            </div>
+        </div>
+        <br />
+        <div class="row justify-content-center">
+            <div class="col">
+                <div class="row">
+                    <div class="col text-center">
+                        <button class="btn btn-primary mr-2" id="search-records" type="button">Search Records</button>
+                        <button class="btn btn-secondary mr-2" id="reset-form" type="button">Clear Records</button>
+                    </div>
+                    <div class="col-auto text-right">
+                        <a href="#" id="recent-searches-link">Recent Searches</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    <div id="alerts-container"></div>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            Search Results
+        </div>
+        <div class="card-body" style="min-height: 500px; overflow-y: auto;">
+            <!-- Loader -->
+            <div class="loader"></div>
+            <table class="table table-bordered custom-table" id="records-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="select-all" /></th> <!-- Checkbox for selecting all rows -->
+                        <th>ID</th>
+                        <th>Application</th>
+                        <th>Release</th>
+                        <th>Scenario</th>
+                        <th>Transaction</th>
+                        <th>SLA</th>
+                        <th>TPS</th>
+                        {% if user and user['role'] == 'admin' %}
+                        <th>Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Records will be dynamically loaded here -->
+                </tbody>
+            </table>
+            <div class="row justify-content-center">
+                <div class="col text-center">
+                    <button class="btn btn-danger mr-2" id="delete-selected" type="button">Delete Selected</button>
+                    <button class="btn btn-warning mr-2" id="delete-application" type="button">Delete All Data for Application</button>
+                    <button class="btn btn-warning mr-2" id="delete-release" type="button">Delete Data for Release</button>
+                </div>
+            </div>
+
+            <!-- Confirm Delete Selected Modal -->
+            <div aria-hidden="true" aria-labelledby="deleteSelectedModalLabel" class="modal fade" id="deleteSelectedModal" role="dialog" tabindex="-1">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteSelectedModalLabel">Confirm Deletion</h5>
+                            <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to delete the selected records?
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" data-dismiss="modal" type="button">Close</button>
+                            <button class="btn btn-danger" id="confirm-delete-selected" type="button">Delete Selected</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirm Delete All Data Modal -->
+            <div aria-hidden="true" aria-labelledby="deleteAllDataModalLabel" class="modal fade" id="deleteAllDataModal" role="dialog" tabindex="-1">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteAllDataModalLabel">Confirm Deletion of All Data</h5>
+                            <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to delete all data for the selected application?
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" data-dismiss="modal" type="button">Close</button>
+                            <button class="btn btn-danger" id="confirm-delete-application" type="button">Delete All Data</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirm Delete Release Data Modal -->
+            <div aria-hidden="true" aria-labelledby="deleteReleaseDataModalLabel" class="modal fade" id="deleteReleaseDataModal" role="dialog" tabindex="-1">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteReleaseDataModalLabel">Confirm Deletion of Release Data</h5>
+                            <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            Are you sure you want to delete all data for the selected release?
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" data-dismiss="modal" type="button">Close</button>
+                            <button class="btn btn-danger" id="confirm-delete-release" type="button">Delete Release Data</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Initialize Select2 for dropdowns
+    $('.select2').select2();
+
+    // DataTable initialization
+    var table = $('#records-table').DataTable({
+        columns: [
+            { data: null, defaultContent: '<input type="checkbox" class="select-record">' },
+            { data: 'Id' },
+            { data: 'applicationName' },
+            { data: 'releaseID' },
+            { data: 'businessScenario' },
+            { data: 'transactionName' },
+            { data: 'SLA' },
+            { data: 'TPS' },
+            {% if user and user['role'] == 'admin' %}
+            { data: 'Actions' }
+            {% endif %}
+        ]
+    });
+
+    // Fetch and populate releases based on selected application
+    $('#application_name').change(function() {
+        var applicationName = $(this).val();
+        $('#release_id').empty().append('<option value="">Release Name</option>').select2('destroy').select2();
+
+        if (applicationName) {
+            $.getJSON('/get_record_releases/' + applicationName, function(releases) {
+                releases.forEach(function(release) {
+                    $('#release_id').append('<option value="' + release + '">' + release + '</option>');
+                });
+                $('#release_id').select2();
+            });
+        }
+    });
+
+    // Search records based on criteria
+    $('#search-records').click(function() {
+        var applicationName = $('#application_name').val();
+        var releaseId = $('#release_id').val();
+        var transactionName = $('#transaction_name').val();
+
+        $.ajax({
+            url: '/fetch_records',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                application_name: applicationName,
+                release_id: releaseId,
+                transaction_name: transactionName
+            }),
+            success: function(data) {
+                table.clear().rows.add(data).draw();
+            }
+        });
+    });
+
+    // Select/Deselect all records
+    $('#select-all').click(function() {
+        var isChecked = $(this).prop('checked');
+        $('#records-table .select-record').prop('checked', isChecked);
+    });
+
+    // Delete selected records
+    $('#delete-selected').click(function() {
+        var ids = [];
+        $('#records-table .select-record:checked').each(function() {
+            var row = $(this).closest('tr');
+            var rowData = table.row(row).data();
+
+            console.log('Row Data:', rowData); // Log entire row data to debug
+
+            if (rowData && rowData.Id) {
+                ids.push(rowData.Id);
+            } else {
+                console.log('ID not found in rowData:', rowData);
+            }
+        });
+
+        console.log('Collected IDs:', ids);
+
+
+        if (ids.length > 0) {
+            console.log(ids.length);
+            console.log("ID:" + ids );
+            $('#deleteSelectedModal').modal('show');
+            $('#confirm-delete-selected').click(function() {
+                $.ajax({
+                    url: '/delete_records',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ ids: ids }),
+                    success: function() {
+                        $('#deleteSelectedModal').modal('hide');
+                        table.rows('.selected').remove().draw();
+                    }
+                });
+            });
+        } else {
+            alert('No records selected.');
+        }
+    });
+
+    // Delete all data for selected application
+    $('#delete-application').click(function() {
+        var applicationName = $('#application_name').val();
+
+        if (applicationName) {
+            $('#deleteAllDataModal').modal('show');
+            $('#confirm-delete-application').click(function() {
+                $.ajax({
+                    url: '/delete_application_data',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ applicationName: applicationName }),
+                    success: function() {
+                        $('#deleteAllDataModal').modal('hide');
+                        table.clear().draw();
+                    }
+                });
+            });
+        } else {
+            alert('Please select an application.');
+        }
+    });
+
+    // Delete all data for selected release
+    $('#delete-release').click(function() {
+        var releaseId = $('#release_id').val();
+
+        if (releaseId) {
+            $('#deleteReleaseDataModal').modal('show');
+            $('#confirm-delete-release').click(function() {
+                $.ajax({
+                    url: '/delete_release_data',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ releaseId: releaseId }),
+                    success: function() {
+                        $('#deleteReleaseDataModal').modal('hide');
+                        table.clear().draw();
+                    }
+                });
+            });
+        } else {
+            alert('Please select a release.');
+        }
+    });
+
+    // Reset form and table
+    $('#reset-form').click(function() {
+        $('#nfr-form')[0].reset();
+        $('#release_id').empty().append('<option value="">Release Name</option>').select2('destroy').select2();
+        table.clear().draw();
+    });
+});
+</script>
+
+{% endblock %}
+
+
+---------------------
+
 
 
 {% extends "base.html" %} 
