@@ -1,3 +1,43 @@
+data: $('#edit-form').serialize(),
+                    success: function(data) {
+                        if (data.success) {
+                            // Show success alert
+                            showAlert('success', 'Record updated successfully.');
+                            // Fetch the updated record
+                            $.ajax({
+                                url: '/get_record',
+                                type: 'POST',
+                                data: { Id: $('#edit-id').val() },
+                                success: function(recordData) {
+                                    // Update the corresponding row in the data table
+                                    var row = table.row(function(idx, data, node) {
+                                        return data[0] === recordData.Id; // Find the row by record ID
+                                    });
+                                    if (row.any()) {
+                                        // Update only the specific row data in the DataTable
+                                            row.data([
+                                                recordData.Id,
+                                                recordData.applicationName,
+                                                recordData.releaseID,
+                                                recordData.businessScenario,
+                                                recordData.transactionName,
+                                                recordData.SLA,
+                                                recordData.TPS,
+                                                '<button class="btn btn-primary edit-btn" data-id="' + recordData.Id + '" title="Edit"><i class="fa fa-edit"></i></button>' +
+                                                '<button class="btn btn-danger delete-btn" data-id="' + recordData.Id + '" title="Delete"><i class="fa fa-trash-alt"></i></button>'
+                                            ]).draw(false);  // Use draw(false) to avoid full table redraw
+
+                                    }
+                                    $('#editModal').modal('hide');
+                                }
+
+
+--------------------------
+
+
+
+
+---------------------------
 def process_excel_file(filepath):
     error_log = []
     total_records = 0
