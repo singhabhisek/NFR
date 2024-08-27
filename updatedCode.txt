@@ -1,3 +1,15 @@
+# Construct the SQL query
+                query = 'DELETE FROM NFRDetails WHERE Id IN ({seq})'.format(seq=','.join(['?'] * len(ids)))
+
+                # Debugging statement to print the final SQL query and parameters
+                print("Executing SQL:", query)
+                print("With Parameters:", ids)
+
+                # Execute the SQL query
+                cursor.execute(query, ids)
+
+--
+
 {% extends "base.html" %} 
 {% block title %}Dashboard{% endblock %}
 
