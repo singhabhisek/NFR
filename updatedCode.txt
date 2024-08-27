@@ -1,0 +1,115 @@
+def process_excel_file(filepath):
+    error_log = []
+    total_records = 0
+    inserted_records = 0
+    updated_records = 0
+    passed_records = 0
+    failed_records = 0
+
+    # Define mandatory columns
+    mandatory_columns = ['ApplicationName', 'ReleaseID', 'BusinessScenario', 'TransactionName', 'SLA', 'TPS', 'Comments']
+
+    try:
+        wb = load_workbook(filename=filepath)
+        ws = wb.active
+    except Exception as load_error:
+        error_log.append(f"Error loading Excel file: {load_error}")
+        app.logger.error(f"Error loading Excel file: {load_error}", extra={'func': 'PROCESS_EXCEL_FILE'})
+        return error_log, None
+
+    # Extract headers from the first row
+    headers = [cell.value for cell in ws[1]]
+
+    # Check if mandatory columns are present
+    missing_columns = [col for col in mandatory_columns if col not in headers]
+    if missing_columns:
+        error_message = f"Missing mandatory columns: {', '.join(missing_columns)}"
+        error_log.append(error_message)
+        app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+        raise Exception(error_message)
+
+    # Map headers to their indexes
+    header_index_map = {header: index for index, header in enumerate(headers)}
+
+    current_user = session.get('user', 'defaultUser')
+    current_time = "2024-06-06 10:10:10"
+
+    with get_db_connection() as conn:
+        for row_number, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            # Extract data using header indices
+            applicationName = row[header_index_map.get('ApplicationName', -1)]
+
+            # Skip rows where ApplicationName is None (row with borders only)
+            if not applicationName:
+                continue
+
+            releaseID = row[header_index_map['ReleaseID']]
+            businessScenario = row[header_index_map['BusinessScenario']]
+            transactionName = row[header_index_map['TransactionName']]
+            SLA = row[header_index_map['SLA']]
+            TPS = row[header_index_map['TPS']]
+            comments = row[header_index_map['Comments']]
+
+            total_records += 1
+
+            # Validate SLA and TPS
+            if SLA is None or TPS is None:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: SLA and TPS must have values"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+                continue
+
+            try:
+                SLA = float(SLA)
+                TPS = float(TPS)
+            except ValueError:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: SLA and TPS must be valid numbers"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+                continue
+
+            try:
+                # Check if the record exists
+                cursor = conn.execute('''
+                    SELECT * FROM NFRDetails
+                    WHERE applicationName = ? AND releaseID = ? AND transactionName = ?
+                ''', (applicationName, releaseID, transactionName))
+
+                existing_record = cursor.fetchone()
+                if existing_record:
+                    # Update the record
+                    conn.execute('''
+                        UPDATE NFRDetails
+                        SET businessScenario = ?, SLA = ?, TPS = ?, comments = ?, modifiedBy = ?, modified_date = ?
+                        WHERE applicationName = ? AND releaseID = ? AND transactionName = ?
+                    ''', (businessScenario, SLA, TPS, comments, current_user, current_time, applicationName, releaseID, transactionName))
+                    updated_records += 1
+                else:
+                    # Insert the record
+                    conn.execute('''
+                        INSERT INTO NFRDetails (applicationName, releaseID, businessScenario, transactionName, SLA, TPS, comments, createdBy, modifiedBy, created_date, modified_date)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (applicationName, releaseID, businessScenario, transactionName, SLA, TPS, comments, current_user, current_user, current_time, current_time))
+                    inserted_records += 1
+
+                passed_records += 1
+            except Exception as e:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: {e}"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+
+        conn.commit()
+
+    summary = {
+        'total': total_records,
+        'inserted': inserted_records,
+        'updated': updated_records,
+        'passed': passed_records,
+        'failed': failed_records
+    }
+    return error_log, summary
+
+
