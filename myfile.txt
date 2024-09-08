@@ -1,0 +1,487 @@
+# If transaction_name is empty, set it to None
+transaction_name = transaction_name if transaction_name else None
+
+query = """
+    WITH LatestReleaseForBackendCall AS (
+        SELECT 
+            transactionName AS backendCall, 
+            MAX(releaseID) AS recentReleaseID
+        FROM NFRDetails
+        GROUP BY transactionName
+    ),
+    NFRDetailDepend AS (
+        SELECT
+            t.applicationName, 
+            t.transactionName, 
+            t.releaseID, 
+            t.SLA,
+            t.TPS, /* Assume TPS is in the same table */
+            d.backendCall, 
+            d.callType
+        FROM NFRDetails t
+        LEFT JOIN NFROperationDependency d ON t.transactionName = d.transactionName
+        LEFT JOIN LatestReleaseForBackendCall lrb ON d.backendCall = lrb.backendCall
+        WHERE t.applicationName = ? 
+          AND (t.releaseID = ? OR EXISTS (
+                SELECT 1
+                FROM LatestReleaseForBackendCall lrb
+                WHERE lrb.backendCall = d.backendCall
+                  AND lrb.recentReleaseID = t.releaseID
+            ))
+          AND (? IS NULL OR t.transactionName LIKE ?)
+    ),
+    SLAComparisonCTE AS (
+        SELECT 
+            t.ApplicationName, 
+            t.transactionName, 
+            t.backendCall, 
+            t.CallType, 
+            t.SLA, 
+            t.TPS, /* Include TPS for backend call */
+            t.releaseID,
+            CASE 
+                WHEN t.CallType = 'Async' THEN 
+                    (SELECT MAX(SLA) 
+                     FROM NFRDetails nr 
+                     WHERE nr.transactionName = t.backendCall 
+                       AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall))
+                WHEN t.CallType = 'Sync' THEN 
+                    (SELECT SUM(SLA) 
+                     FROM NFRDetails nr 
+                     WHERE nr.transactionName = t.backendCall 
+                       AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall))
+                ELSE 0 
+            END AS SLAComparison,
+            (SELECT MAX(TPS) FROM NFRDetails nr WHERE nr.transactionName = t.backendCall AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall)) AS TPSComparison
+        FROM NFRDetailDepend t
+    )
+    SELECT
+        ApplicationName, 
+        releaseID, 
+        transactionName, 
+        SLA,
+        TPS, /* TPS of the main transaction */
+        ROUND(COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0), 2) AS TotalBackendCallDuration,
+        COALESCE(TotalTPS, 0) AS TotalBackendTPS, /* Total TPS for backend calls */
+        GROUP_CONCAT(backendCall SEPARATOR ', ') AS backendCallList, /* Use GROUP_CONCAT with SEPARATOR */
+        CASE
+            WHEN COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) = 0 THEN 'NA'
+            ELSE CASE 
+                WHEN SLA > COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Higher' 
+                WHEN SLA < COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Lower' 
+                ELSE 'Equal' 
+            END 
+        END AS CompareSLA,
+        CASE
+            WHEN COALESCE(TotalTPS, 0) = 0 THEN 'NA'
+            ELSE CASE 
+                WHEN TPS > COALESCE(TotalTPS, 0) THEN 'Higher' 
+                WHEN TPS < COALESCE(TotalTPS, 0) THEN 'Lower' 
+                ELSE 'Equal' 
+            END 
+        END AS CompareTPS /* Comparison for TPS */
+    FROM (
+        SELECT 
+            ApplicationName, 
+            transactionName, 
+            releaseID, 
+            SLA, 
+            TPS, /* Include TPS for the transaction */
+            backendCall,
+            SUM(CASE WHEN CallType = 'Sync' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName, releaseID) AS TotalSyncSLA,
+            MAX(CASE WHEN CallType = 'Async' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName, releaseID) AS MaxAsyncSLA,
+            SUM(TPSComparison) OVER (PARTITION BY transactionName, releaseID) AS TotalTPS /* Sum TPS for backend calls */
+        FROM SLAComparisonCTE
+    ) AS p
+    WHERE ApplicationName = ? 
+      AND releaseID = ? 
+      AND (? IS NULL OR transactionName LIKE ?)
+    GROUP BY ApplicationName, releaseID, transactionName, SLA, TPS;
+"""
+
+params = [
+    application_name,
+    release_id,
+    transaction_name, f'%{transaction_name}%' if transaction_name else None,
+    application_name,
+    release_id,
+    transaction_name, f'%{transaction_name}%' if transaction_name else None
+]
+
+conn = get_db_connection()
+cur = conn.cursor()
+cur.execute(query, params)
+rows = cur.fetchall()
+conn.close()
+
+
+
+=-------------
+
+TPS Included - =======
+
+# If transaction_name is empty, set it to None
+transaction_name = transaction_name if transaction_name else None
+
+query = """
+    WITH LatestReleaseForBackendCall AS (
+        SELECT 
+            transactionName AS backendCall, 
+            MAX(releaseID) AS recentReleaseID
+        FROM NFRDetails
+        GROUP BY transactionName
+    ),
+    NFRDetailDepend AS (
+        SELECT
+            t.applicationName, 
+            t.transactionName, 
+            t.releaseID, 
+            t.SLA,
+            t.TPS, /* Assume TPS is in the same table */
+            d.backendCall, 
+            d.callType
+        FROM NFRDetails t
+        LEFT JOIN NFROperationDependency d ON t.transactionName = d.transactionName
+        LEFT JOIN LatestReleaseForBackendCall lrb ON d.backendCall = lrb.backendCall
+        WHERE t.applicationName = ? 
+          AND (t.releaseID = ? OR EXISTS (
+                SELECT 1
+                FROM LatestReleaseForBackendCall lrb
+                WHERE lrb.backendCall = d.backendCall
+                  AND lrb.recentReleaseID = t.releaseID
+            ))
+          AND (? IS NULL OR t.transactionName LIKE ?)
+    ),
+    SLAComparisonCTE AS (
+        SELECT 
+            t.ApplicationName, 
+            t.transactionName, 
+            t.backendCall, 
+            t.CallType, 
+            t.SLA, 
+            t.TPS, /* Include TPS for backend call */
+            t.releaseID,
+            CASE 
+                WHEN t.CallType = 'Async' THEN 
+                    (SELECT MAX(SLA) 
+                     FROM NFRDetails nr 
+                     WHERE nr.transactionName = t.backendCall 
+                       AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall))
+                WHEN t.CallType = 'Sync' THEN 
+                    (SELECT SUM(SLA) 
+                     FROM NFRDetails nr 
+                     WHERE nr.transactionName = t.backendCall 
+                       AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall))
+                ELSE 0 
+            END AS SLAComparison,
+            (SELECT MAX(TPS) FROM NFRDetails nr WHERE nr.transactionName = t.backendCall AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall)) AS TPSComparison
+        FROM NFRDetailDepend t
+    )
+    SELECT
+        ApplicationName, 
+        releaseID, 
+        transactionName, 
+        SLA,
+        TPS, /* TPS of the main transaction */
+        ROUND(COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0), 2) AS TotalBackendCallDuration,
+        COALESCE(TotalTPS, 0) AS TotalBackendTPS, /* Total TPS for backend calls */
+        GROUP_CONCAT(backendCall) AS backendCallList,
+        CASE
+            WHEN COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) = 0 THEN 'NA'
+            ELSE CASE 
+                WHEN SLA > COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Higher' 
+                WHEN SLA < COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Lower' 
+                ELSE 'Equal' 
+            END 
+        END AS CompareSLA,
+        CASE
+            WHEN COALESCE(TotalTPS, 0) = 0 THEN 'NA'
+            ELSE CASE 
+                WHEN TPS > COALESCE(TotalTPS, 0) THEN 'Higher' 
+                WHEN TPS < COALESCE(TotalTPS, 0) THEN 'Lower' 
+                ELSE 'Equal' 
+            END 
+        END AS CompareTPS /* Comparison for TPS */
+    FROM (
+        SELECT 
+            ApplicationName, 
+            transactionName, 
+            releaseID, 
+            SLA, 
+            TPS, /* Include TPS for the transaction */
+            backendCall,
+            SUM(CASE WHEN CallType = 'Sync' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName, releaseID) AS TotalSyncSLA,
+            MAX(CASE WHEN CallType = 'Async' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName, releaseID) AS MaxAsyncSLA,
+            SUM(TPSComparison) OVER (PARTITION BY transactionName, releaseID) AS TotalTPS /* Sum TPS for backend calls */
+        FROM SLAComparisonCTE
+    ) AS p
+    WHERE ApplicationName = ? 
+      AND releaseID = ? 
+      AND (? IS NULL OR transactionName LIKE ?)
+    GROUP BY ApplicationName, releaseID, transactionName, SLA, TPS;
+"""
+
+params = [
+    application_name,
+    release_id,
+    transaction_name, f'%{transaction_name}%' if transaction_name else None,
+    application_name,
+    release_id,
+    transaction_name, f'%{transaction_name}%' if transaction_name else None
+]
+
+conn = get_db_connection()
+cur = conn.cursor()
+cur.execute(query, params)
+rows = cur.fetchall()
+conn.close()
+
+
+=================
+
+excel
+
+
+
+
+
+from openpyxl import load_workbook
+from decimal import Decimal, ROUND_HALF_UP
+import sqlite3  # or your specific database library
+
+# Function to round numbers to three decimal places
+def round_to_three_decimal(value):
+    if value is None:
+        return None
+    return Decimal(value).quantize(Decimal('0.000'), rounding=ROUND_HALF_UP)
+
+# Function to process the uploaded Excel file
+def process_excel_file(filepath):
+    error_log = []
+    total_records = 0
+    inserted_records = 0
+    updated_records = 0
+    passed_records = 0
+    failed_records = 0
+
+    # Define mandatory columns
+    mandatory_columns = ['ApplicationName', 'ReleaseID', 'BusinessScenario', 'TransactionName', 'SLA', 'TPS', 'Comments']
+
+    try:
+        wb = load_workbook(filename=filepath)
+        ws = wb.active
+    except Exception as load_error:
+        error_log.append(f"Error loading Excel file: {load_error}")
+        app.logger.error(f"Error loading Excel file: {load_error}", extra={'func': 'PROCESS_EXCEL_FILE'})
+        return error_log, None
+
+    # Extract headers from the first row
+    headers = [cell.value for cell in ws[1]]
+
+    # Check if mandatory columns are present
+    missing_columns = [col for col in mandatory_columns if col not in headers]
+    if missing_columns:
+        error_message = f"Missing mandatory columns: {', '.join(missing_columns)}"
+        error_log.append(error_message)
+        app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+        raise Exception(error_message)
+
+    # Map headers to their indexes
+    header_index_map = {header: index for index, header in enumerate(headers)}
+
+    current_user = session.get('user', 'defaultUser')
+    current_time = "2024-06-06 10:10:10"
+
+    with get_db_connection() as conn:
+        for row_number, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            # Extract data using header indices
+            applicationName = row[header_index_map.get('ApplicationName', -1)]
+
+            # Skip rows where ApplicationName is None (row with borders only)
+            if not applicationName:
+                continue
+
+            releaseID = row[header_index_map['ReleaseID']]
+            businessScenario = row[header_index_map['BusinessScenario']]
+            transactionName = row[header_index_map['TransactionName']]
+            SLA = row[header_index_map['SLA']]
+            TPS = row[header_index_map['TPS']]
+            comments = row[header_index_map['Comments']]
+
+            total_records += 1
+
+            # Validate SLA and TPS
+            if SLA is None or TPS is None:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: SLA and TPS must have values"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+                continue
+
+            try:
+                SLA = round_to_three_decimal(float(SLA))
+                TPS = round_to_three_decimal(float(TPS))
+            except ValueError:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: SLA and TPS must be valid numbers"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+                continue
+
+            try:
+                # Check if the record exists
+                cursor = conn.execute('''
+                    SELECT * FROM NFRDetails
+                    WHERE applicationName = ? AND releaseID = ? AND transactionName = ? AND businessScenario = ?
+                ''', (applicationName, releaseID, transactionName, businessScenario))
+
+                existing_record = cursor.fetchone()
+                if existing_record:
+                    # Update the record
+                    conn.execute('''
+                        UPDATE NFRDetails
+                        SET businessScenario = ?, SLA = ?, TPS = ?, comments = ?, modifiedBy = ?, modified_date = ?
+                        WHERE applicationName = ? AND releaseID = ? AND transactionName = ? AND businessScenario = ?
+                    ''', (businessScenario, SLA, TPS, comments, current_user, current_time, applicationName, releaseID, transactionName, businessScenario))
+                    updated_records += 1
+                else:
+                    # Insert the record
+                    conn.execute('''
+                        INSERT INTO NFRDetails (applicationName, releaseID, businessScenario, transactionName, SLA, TPS, comments, createdBy, modifiedBy, created_date, modified_date)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (applicationName, releaseID, businessScenario, transactionName, SLA, TPS, comments, current_user, current_user, current_time, current_time))
+                    inserted_records += 1
+
+                passed_records += 1
+            except Exception as e:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: {e}"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+
+        conn.commit()
+
+    summary = {
+        'total': total_records,
+        'inserted': inserted_records,
+        'updated': updated_records,
+        'passed': passed_records,
+        'failed': failed_records
+    }
+    return error_log, summary
+
+
+
+
+
+===========================
+
+import logging
+from datetime import datetime
+from openpyxl import load_workbook
+
+def process_excel(filepath):
+    error_log = []
+    total_records = 0
+    inserted_records = 0
+    updated_records = 0
+    passed_records = 0
+    failed_records = 0
+
+    # Define mandatory columns
+    mandatory_columns = ['ApplicationName', 'ReleaseID', 'BusinessScenario', 'TransactionName', 'BackendCall', 'CallType']
+
+    try:
+        wb = load_workbook(filename=filepath)
+        ws = wb.active
+    except Exception as load_error:
+        error_log.append(f"Error loading Excel file: {load_error}")
+        app.logger.error(f"Error loading Excel file: {load_error}", extra={'func': 'PROCESS_EXCEL_FILE'})
+        return error_log, None  # Return error_log and summary as None immediately if loading the file fails
+
+    # Extract headers from the first row
+    headers = [cell.value for cell in ws[1]]
+
+    # Check if mandatory columns are present
+    missing_columns = [col for col in mandatory_columns if col not in headers]
+    if missing_columns:
+        error_message = f"Missing mandatory columns: {', '.join(missing_columns)}"
+        error_log.append(error_message)
+        app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+        raise Exception(error_message)  # Abort processing if mandatory columns are missing
+
+    # Map headers to their indexes
+    header_index_map = {header: index for index, header in enumerate(headers)}
+
+    current_user = session.get('user', 'defaultUser')  # Retrieve current user
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Use current time
+
+    with get_db_connection() as conn:
+        for row_number, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            # Extract data using header indices
+            try:
+                applicationName = row[header_index_map['ApplicationName']]
+                releaseID = row[header_index_map['ReleaseID']]
+                businessScenario = row[header_index_map['BusinessScenario']]
+                transactionName = row[header_index_map['TransactionName']]
+                callType = row[header_index_map['CallType']]
+                backendCall = row[header_index_map['BackendCall']]
+                comments = row[header_index_map['Comments']] if 'Comments' in header_index_map else ""
+            except IndexError as e:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: {e}"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+                continue
+
+            # Round values to three decimal places (example for SLA and TPS if they were included)
+            # For this example, assume we have SLA and TPS columns
+            # sla = round(row[header_index_map['SLA']], 3) if 'SLA' in header_index_map else None
+            # tps = round(row[header_index_map['TPS']], 3) if 'TPS' in header_index_map else None
+
+            createdBy = "defaultUser"
+            total_records += 1
+
+            try:
+                # Check if the record exists with extended duplicate check
+                cursor = conn.execute('''
+                    SELECT * FROM NFROperationDependency
+                    WHERE applicationName = ? AND releaseID = ? AND businessScenario = ? AND transactionName = ?
+                ''', (applicationName, releaseID, businessScenario, transactionName))
+
+                existing_record = cursor.fetchone()
+                if existing_record:
+                    # Update the record
+                    conn.execute("""
+                        UPDATE NFROperationDependency
+                        SET backendCall = ?, callType = ?, comments = ?, modifiedBy = ?, modified_date = ?
+                        WHERE applicationName = ? AND releaseID = ? AND businessScenario = ? AND transactionName = ?
+                        """, (backendCall, callType, comments, createdBy, current_time,
+                              applicationName, releaseID, businessScenario, transactionName))
+                    updated_records += 1
+
+                else:
+                    # Insert the record
+                    conn.execute("""
+                        INSERT INTO NFROperationDependency (applicationName, releaseID, businessScenario, transactionName, backendCall, callType, comments, createdBy, created_date)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (applicationName, releaseID, businessScenario, transactionName, backendCall, callType, comments, createdBy, current_time))
+                    inserted_records += 1
+                passed_records += 1
+            except Exception as e:
+                failed_records += 1
+                error_message = f"Error processing row {row_number}: {e}"
+                error_log.append(error_message)
+                app.logger.error(error_message, extra={'func': 'PROCESS_EXCEL_FILE'})
+
+        conn.commit()
+
+    summary = {
+        'total': total_records,
+        'inserted': inserted_records,
+        'updated': updated_records,
+        'passed': passed_records,
+        'failed': failed_records
+    }
+    print(summary)
+    return error_log, summary
