@@ -1,3 +1,51 @@
+ .footer {
+     position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #f8f9fa;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    border-top: 1px solid #ddd;
+    box-shadow: 0 -1px 5px rgba(0,0,0,0.1);
+        z-index: 1000; /* Ensure it appears above the sidebar */
+
+}
+
+.footer-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px; /* Adjust the gap between items as needed */
+}
+
+.footer-item {
+    margin: 0;
+    font-size: 14px;
+    color: #333;
+}
+
+.footer-item a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.footer-item a:hover {
+    text-decoration: underline;
+}
+
+
+
+<footer class="footer">
+                <div class="footer-content">
+                    <p class="footer-item">Developed by PPPP</p>
+                    <p class="footer-item">For any issues contact <a href="mailto:abc@gmail.com">abc@gmail.com</a></p>
+                </div>
+            </footer>
+
+===============
+
 # Construct the SQL query
                 query = 'DELETE FROM NFRDetails WHERE Id IN ({seq})'.format(seq=','.join(['?'] * len(ids)))
 
