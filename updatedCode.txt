@@ -1,4 +1,51 @@
- .footer {
+// Export to Excel button click event handler
+$('#export-excel').on('click', function() {
+    // Create a new workbook and worksheet
+    var wb = XLSX.utils.book_new();
+    var ws_data = [];
+
+    // Get table headers and determine which columns to exclude
+    var headers = $('#records-table th');
+    var headerRow = [];
+    var excludeIndices = [];
+
+    headers.each(function(index) {
+        var headerText = $(this).text().trim();
+        if (headerText === 'ID' || headerText === 'Actions') {
+            excludeIndices.push(index); // Collect indices to exclude
+        } else {
+            headerRow.push({ v: headerText, s: { font: { bold: true } } }); // Bold header text
+        }
+    });
+    ws_data.push(headerRow);
+
+    // Use DataTables API to get all rows, not just the visible ones
+    var table = $('#records-table').DataTable();
+    var allData = table.rows({ search: 'applied' }).data(); // Get all filtered data based on search criteria
+
+    // Loop through all rows and exclude the specified columns
+    allData.each(function(rowData, rowIndex) {
+        var rowArray = [];
+        headers.each(function(index) {
+            if (!excludeIndices.includes(index)) {
+                rowArray.push(rowData[index] ? rowData[index].toString().trim() : '');
+            }
+        });
+        ws_data.push(rowArray);
+    });
+
+    // Convert the data to worksheet and append to the workbook
+    var ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, 'Records');
+
+    // Write the workbook to a file
+    XLSX.writeFile(wb, 'Records.xlsx');
+});
+
+
+====
+
+.footer {
      position: fixed;
     bottom: 0;
     left: 0;
