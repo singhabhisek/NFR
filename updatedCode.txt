@@ -1,4 +1,21 @@
-        Developed by PPPP | For any issues contact <a href="mailto:abc@gmail.com?subject=Issue in the Portal">abc@gmail.com</a>
+// Use DataTables API to get all rows, not just the visible ones
+    var table = $('#records-table').DataTable();
+    var allData = table.rows({ search: 'applied' }).nodes(); // Get all filtered data based on search criteria
+
+    // Loop through all rows and exclude the specified columns
+    $(allData).each(function() {
+        var rowData = [];
+        $(this).find('td').each(function(index) {
+            if (!excludeIndices.includes(index)) { // Exclude "ID" and "Actions" columns
+                rowData.push($(this).text().trim());
+            }
+        });
+        ws_data.push(rowData);
+    });
+
+
+
+Developed by PPPP | For any issues contact <a href="mailto:abc@gmail.com?subject=Issue in the Portal">abc@gmail.com</a>
 
 
 // Export to Excel button click event handler
