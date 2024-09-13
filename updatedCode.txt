@@ -46,6 +46,722 @@
 
 ===============
 
+
+@app.route('/discrepancy', methods=['GET', 'POST'])
+def handle_discrepancy():
+    if 'username' in session:
+        user = get_user_access(session['username'])
+
+        if not user:
+            user = {'userid': session['username'], 'role': 'user', 'activeStatus': 'active'}
+    
+    try:
+        if request.method == 'POST':
+            application_name = request.form.get('application_name')
+            release_id = request.form.get('release_id')
+            transaction_name = request.form.get('transaction_name')
+
+            # If transaction_name is empty, set it to None
+            transaction_name = transaction_name if transaction_name else None
+
+            query = """
+                WITH LatestReleaseForBackendCall AS (
+                    SELECT 
+                        transactionName AS backendCall, 
+                        MAX(releaseID) AS recentReleaseID
+                    FROM NFRDetails
+                    GROUP BY transactionName
+                ),
+                NFRDetailDepend AS (
+                    SELECT
+                        t.applicationName, 
+                        t.transactionName, 
+                        t.releaseID, 
+                        t.SLA,
+                        t.TPS, /* Include TPS for the transaction */
+                        t.BusinessScenario, /* Include Business Scenario */
+                        d.backendCall, 
+                        d.callType
+                    FROM NFRDetails t
+                    LEFT JOIN NFROperationDependency d ON t.transactionName = d.transactionName
+                    LEFT JOIN LatestReleaseForBackendCall lrb ON d.backendCall = lrb.backendCall
+                    WHERE t.applicationName = ? 
+                      AND (t.releaseID = ? OR EXISTS (
+                            SELECT 1
+                            FROM LatestReleaseForBackendCall lrb
+                            WHERE lrb.backendCall = d.backendCall
+                              AND lrb.recentReleaseID = t.releaseID
+                        ))
+                      AND (? IS NULL OR t.transactionName LIKE ?)
+                ),
+                SLAComparisonCTE AS (
+                    SELECT 
+                        t.ApplicationName, 
+                        t.transactionName, 
+                        t.backendCall, 
+                        t.CallType, 
+                        t.SLA, 
+                        t.TPS, /* Include TPS for backend call */
+                        t.BusinessScenario, /* Include Business Scenario */
+                        t.releaseID,
+                        CASE 
+                            WHEN t.CallType = 'Async' THEN 
+                                (SELECT MAX(SLA) 
+                                 FROM NFRDetails nr 
+                                 WHERE nr.transactionName = t.backendCall 
+                                   AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall))
+                            WHEN t.CallType = 'Sync' THEN 
+                                (SELECT SUM(SLA) 
+                                 FROM NFRDetails nr 
+                                 WHERE nr.transactionName = t.backendCall 
+                                   AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall))
+                            ELSE 0 
+                        END AS SLAComparison,
+                        (SELECT MAX(TPS) FROM NFRDetails nr WHERE nr.transactionName = t.backendCall AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall)) AS TPSComparison
+                    FROM NFRDetailDepend t
+                )
+                SELECT
+                    ApplicationName, 
+                    releaseID, 
+                    transactionName, 
+                    SLA,
+                    TPS, /* TPS of the main transaction */
+                    BusinessScenario, /* Business Scenario of the main transaction */
+                    ROUND(COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0), 2) AS TotalBackendCallDuration,
+                    COALESCE(TotalTPS, 0) AS TotalBackendTPS, /* Total TPS for backend calls */
+                    GROUP_CONCAT(backendCall) AS backendCallList,
+                    CASE
+                        WHEN COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) = 0 THEN 'NA'
+                        ELSE CASE 
+                            WHEN SLA > COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Higher' 
+                            WHEN SLA < COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Lower' 
+                            ELSE 'Equal' 
+                        END 
+                    END AS CompareSLA,
+                    CASE
+                        WHEN COALESCE(TotalTPS, 0) = 0 THEN 'NA'
+                        ELSE CASE 
+                            WHEN TPS > COALESCE(TotalTPS, 0) THEN 'Higher' 
+                            WHEN TPS < COALESCE(TotalTPS, 0) THEN 'Lower' 
+                            ELSE 'Equal' 
+                        END 
+                    END AS CompareTPS /* Comparison for TPS */
+                FROM (
+                    SELECT 
+                        ApplicationName, 
+                        transactionName, 
+                        releaseID, 
+                        SLA, 
+                        TPS, /* Include TPS for the transaction */
+                        BusinessScenario, /* Include Business Scenario */
+                        backendCall,
+                        SUM(CASE WHEN CallType = 'Sync' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName, releaseID) AS TotalSyncSLA,
+                        MAX(CASE WHEN CallType = 'Async' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName, releaseID) AS MaxAsyncSLA,
+                        SUM(TPSComparison) OVER (PARTITION BY transactionName, releaseID) AS TotalTPS /* Sum TPS for backend calls */
+                    FROM SLAComparisonCTE
+                ) AS p
+                WHERE ApplicationName = ? 
+                  AND releaseID = ? 
+                  AND (? IS NULL OR transactionName LIKE ?)
+                GROUP BY ApplicationName, releaseID, transactionName, SLA, TPS, BusinessScenario;
+            """
+
+            params = [
+                application_name,
+                release_id,
+                transaction_name, f'%{transaction_name}%' if transaction_name else None,
+                application_name,
+                release_id,
+                transaction_name, f'%{transaction_name}%' if transaction_name else None
+            ]
+
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(query, params)
+            rows = cur.fetchall()
+            conn.close()
+
+            data = []
+
+            for row in rows:
+                if row['backendCallList']:
+                    concatenated_calls = f"<b>Backend Duration (sec)</b>: {row['TotalBackendCallDuration']}<br><b>Backend Calls:</b> <br>" + \
+                                         row['backendCallList'].replace(',', ',<br>')
+                else:
+                    concatenated_calls = f"<b>Backend Duration (sec)</b>: {row['TotalBackendCallDuration']}<br><b>Backend Calls:</b> None"
+
+                comparison_icon = ''
+                comparison_text = ''
+
+                if row['CompareSLA'] == 'Higher':
+                    comparison_icon = '<i class="fas fa-arrow-up" title="Higher"></i>'
+                    comparison_text = 'Higher'
+                elif row['CompareSLA'] == 'Lower':
+                    comparison_icon = '<i class="fas fa-arrow-down" title="Lower"></i>'
+                    comparison_text = 'Lower'
+                elif row['CompareSLA'] == 'Equal':
+                    comparison_icon = '<i class="fas fa-exchange-alt" title="Equal"></i>'
+                    comparison_text = 'Equal'
+
+                data.append({
+                    'ApplicationName': row['ApplicationName'],
+                    'releaseID': row['releaseID'],
+                    'transactionName': row['transactionName'],
+                    'SLA': row['SLA'],
+                    'TPS': row['TPS'],  # Added TPS to the result
+                    'BusinessScenario': row['BusinessScenario'],  # Added BusinessScenario to the result
+                    'backendCall': concatenated_calls,
+                    'CompareSLA': comparison_text,
+                    'CompareTPS': row['CompareTPS'],  # Added TPS comparison
+                })
+
+            return jsonify(data)
+
+        else:
+            conn = get_db_connection()
+            apps = conn.execute('SELECT DISTINCT applicationName FROM NFRDetails').fetchall()
+            conn.close()
+
+            searches_cookie = request.cookies.get('recent_searches')
+            recent_searches = json.loads(searches_cookie) if searches_cookie else []
+
+            return render_template('discrepancy.html', apps=apps, recent_searches=recent_searches, user=user)
+
+    except Exception as e:
+        print("Exception occurred:", str(e))
+        return jsonify(success=False, message=str(e)), 500
+
+
+
+
+=================
+
+
+{% extends "base.html" %} {% block title %}Compare NFR{% endblock %} {% block content %}
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet" />
+<style>
+    div.dt-buttons {
+        float: right;
+        margin: 0 5px;
+    }
+</style>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<div class="container1">
+    <div class="card card-header">
+        Search Criteria
+    </div>
+
+    <form class="card card-body" id="nfr-form" method="POST">
+        <div class="form-row form-inline justify-content-center">
+            <div class="col-md-3 d-flex justify-content-end">
+                <div class="form-floating" style="width: 100%;">
+                    <select class="select2 form-control form-control-sm" id="application_name" data-placeholder="Select Application" aria-label="Floating label select example" name="application_name" style="width: 80%;">
+                        <option value="">Select Application</option>
+                        {% for app in apps %}
+                        <option value="{{ app['applicationName'] }}">{{ app['applicationName'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <label for="application_name">Application Name:</label>&emsp;
+                </div>
+            </div>
+            <div class="col-md-3 d-flex justify-content-center">
+                <div class="form-floating" style="width: 100%;">
+                    <select class="select2 form-control" data-placeholder="Select Release" id="release_id" name="release_id" style="width: 80%;">
+                        <option value="">Release Name</option>
+                    </select>
+                    <label for="release_id">Select Release:</label>&emsp;
+                </div>
+            </div>
+            <div class="col-md-3 d-flex justify-content-start">
+                <div class="form-floating" style="width: 100%;">
+                    <input class="form-control" id="transaction_name" name="transaction_name" style="width:90%; height: 36px; font-size: 1rem;" type="text" />
+                    <label for="transaction_name">Type Transaction Name:</label>&emsp;
+                </div>
+            </div>
+        </div>
+        <br />
+
+        <div class="row justify-content-center">
+            <div class="col">
+                <div class="row">
+                    <div class="col text-center">
+                        <button class="btn btn-primary mr-2" id="search-records" type="submit">Search Records</button>
+                        <button class="btn btn-secondary" id="reset-form" type="button">Clear Records</button>
+                    </div>
+                    <div class="col-auto text-right">
+                        <a href="#" id="recent-searches-link">Recent Searches</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div id="alerts-container"></div>
+    <div class="card mt-3">
+        <div class="card-header">
+            Search Results
+        </div>
+        <div class="card-body" style="min-height: 500px; overflow-y: auto;">
+            <!-- Loader -->
+            <div class="loader"></div>
+            <table class="table table-bordered" id="discrepancyTable">
+                <thead>
+                    <tr>
+                        <th>Application Name</th>
+                        <th>Release ID</th>
+                        <th>Transaction Name</th>
+                        <th>SLA</th>
+                        <th>TPS</th> <!-- Added TPS header -->
+                        <th>Backend Calls</th>
+                        <th>Compare SLA</th>
+                        <th>Compare TPS</th> <!-- Added Compare TPS header -->
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in data %}
+                    <tr>
+                        <td>{{ row.ApplicationName }}</td>
+                        <td>{{ row.releaseID }}</td>
+                        <td>{{ row.transactionName }}</td>
+                        <td>{{ row.SLA }}</td>
+                        <td>{{ row.TPS }}</td> <!-- Display TPS for the main transaction -->
+                        <td>
+                            {{ row.backendCall | safe }}
+                        </td>
+                        <td>{{ row.CompareSLA | safe }}</td> <!-- Updated comparison field -->
+                        <td>{{ row.CompareTPS | safe }}</td> <!-- Updated comparison field -->
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div aria-hidden="true" aria-labelledby="recentSearchesModalLabel" class="modal fade" id="recentSearchesModal" role="dialog" tabindex="-1">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="recentSearchesModalLabel">Recent Searches</h5>
+                <button aria-label="Close" class="close" data-dismiss="modal" type="button">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ul id="recent-searches-list">
+                    <!-- Recent searches will be populated here -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-dismiss="modal" type="button">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function resetForm() {
+        $("#discrepancyForm")[0].reset();
+        $("#discrepancyTable").DataTable().clear().draw();
+        $("#tableContainer").html("<p>No records were found.</p>");
+    }
+
+    $(document).ready(function () {
+        $('.select2').select2();
+        var $selectElement = $('#application_name');
+        if ($selectElement.find('option').length > 0) {
+            $selectElement.prop('selectedIndex', 0); // Select the first option
+        }
+
+        var initialAppName = "{{ request.form.get('application_name') }}";
+        var initialReleaseId = "{{ request.form.get('release_id') }}";
+        var initialTransactionName = "{{ request.form.get('transaction_name') }}";
+
+        // Set initial values
+        if (initialAppName) {
+            $("#application_name").val(initialAppName).trigger("change");
+        }
+        if (initialReleaseId) {
+            $("#release_id").val(initialReleaseId);
+        }
+        if (!initialTransactionName || initialTransactionName === "None") {
+            $("#transaction_name").val(""); // Set to blank if falsy or 'None'
+        } else {
+            $("#transaction_name").val(initialTransactionName); // Set to actual value
+        }
+
+        $("#discrepancyTable").DataTable({
+            searching: true, // Enable search box
+            paging: true, // Enable pagination
+            pageLength: 10, // Set default page size
+            lengthChange: true, // Enable changing page size
+            ordering: true, // Enable column sorting
+            info: true, // Show table info
+            autoWidth: true, // Disable automatic column width calculation
+            responsive: true, // Make table responsive
+            dom: "Blfrtip", // Include buttons for export
+            buttons: [{ extend: "excel", className: "btn-secondary", text: "Export to Excel" }],
+            columnDefs: [{ targets: "_all", width: "auto" }],
+            language: {
+                emptyTable: "No records are present",
+            },
+        });
+
+        // Load releases based on application
+        $("#application_name").change(function () {
+            var appName = $(this).val();
+            $.ajax({
+                url: "/get_releases",
+                type: "POST",
+                data: { applicationName: appName },
+                success: function (data) {
+                    var releaseDropdown = $("#release_id");
+                    releaseDropdown.empty().append('<option value="">Select Release</option>');
+                    data.forEach(function (release) {
+                        releaseDropdown.append('<option value="' + release + '">' + release + "</option>");
+                    });
+                },
+            });
+        });
+
+        // Form submission handling
+        $("#nfr-form").submit(function (event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            // Validate form inputs
+            var applicationName = $("#application_name").val();
+            var releaseID = $("#release_id").val();
+            var transactionName = $("#transaction_name").val();
+
+            if (!applicationName) {
+                showAlert("danger", "Application name is required.");
+                return;
+            }
+            if (!releaseID && !transactionName) {
+                showAlert("danger", "Either release ID or transaction name is required.");
+                return;
+            }
+
+            // Show loader when search button is clicked
+            $(".loader").show();
+            var formData = {
+                application_name: $("#application_name").val(),
+                release_id: $("#release_id").val(),
+                transaction_name: $("#transaction_name").val(),
+            };
+
+            // Show loading overlay or message
+            $("#loadingOverlay").show();
+
+            // Save search criteria in cookie
+            $.ajax({
+                type: "POST",
+                url: "/save_search/discrepancy_search", // Dynamic cookie name for index page
+                contentType: "application/json",
+                data: JSON.stringify(formData),
+                success: function (response) {
+                    console.log("Search saved successfully.");
+                },
+                error: function (xhr, status, error) {
+                    console.error("Error saving search:", error);
+                },
+            });
+
+            // Send AJAX request to Flask backend
+            $.ajax({
+                type: "POST",
+                url: "/discrepancy",
+                data: formData,
+                success: function (data) {
+                    $("#loadingOverlay").hide();
+                    $("#discrepancyTable").DataTable().clear().draw();
+                    if (data && Array.isArray(data) && data.length > 0) {
+                        $("#discrepancyTable").DataTable().clear().draw();
+                        data.forEach(function (row) {
+                            $("#discrepancyTable")
+                                .DataTable()
+                                .row.add([
+                                    row.ApplicationName,
+                                    row.releaseID,
+                                    row.transactionName,
+                                    row.SLA,
+                                    row.TPS, // Added TPS field
+                                    `<i class="fa fa-info-circle"></i><span class="backend-details">${row.backendCall}</span>`,
+                                    getComparisonIcon(row.CompareSLA), // Updated comparison logic
+                                    getComparisonIcon(row.CompareTPS)  // Added comparison for TPS
+                                ])
+                                .draw(false);
+                        });
+                    } else {
+                        $("#tableContainer").html("<p>No records found.</p>");
+                    }
+                },
+                error: function (xhr, status, error) {
+                    showAlert("danger", "Error: " + error);
+                    $("#loadingOverlay").hide();
+                },
+                complete: function () {
+                    $(".loader").hide();
+                },
+            });
+        });
+
+        // Function to display alert
+        function showAlert(type, message) {
+            var alertElement = $(`
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            `);
+            $("#alerts-container").append(alertElement);
+            setTimeout(function () {
+                alertElement.alert("close");
+            }, 2000);
+        }
+
+        // Show modal and load recent searches
+        $("#recent-searches-link").click(function (event) {
+            event.preventDefault();
+            $("#recentSearchesModal").modal("show");
+            loadRecentSearches();
+        });
+
+        // Handle recent search click
+        $(document).on("click", ".recent-search-link", function (event) {
+            event.preventDefault();
+            var searchCriteria = $(this).data("search");
+            $("#application_name").val(searchCriteria.application_name).trigger("change");
+            setTimeout(function () {
+                $("#release_id").val(searchCriteria.release_id).trigger("change");
+            }, 1000); // Adjust the timeout as necessary
+            $("#transaction_name").val(searchCriteria.transaction_name === "None" ? "" : searchCriteria.transaction_name);
+            $("#recentSearchesModal").modal("hide");
+        });
+
+        function loadRecentSearches() {
+            $.get("/recent_searches/discrepancy_search", function (data) {
+                var recentSearchesList = $("#recent-searches-list");
+                recentSearchesList.empty();
+                if (data.length > 0) {
+                    data.forEach(function (search) {
+                        var listItem = `<li><a href="#" class="recent-search-link" data-search='${JSON.stringify(search)}'>${search.application_name} - ${search.release_id} - ${search.transaction_name}</a></li>`;
+                        recentSearchesList.append(listItem);
+                    });
+                } else {
+                    recentSearchesList.append("<li>No recent searches.</li>");
+                }
+            });
+        }
+
+        // Function to get comparison icon
+        function getComparisonIcon(compare) {
+            switch (compare) {
+                case "Higher":
+                    return '<i class="fas fa-arrow-up red-icon" title="Higher"></i>';
+                case "Lower":
+                    return '<i class="fas fa-arrow-down green-icon" title="Lower"></i>';
+                case "Equal":
+                    return '<i class="fas fa-exchange-alt amber-icon" title="Equal"></i>';
+                default:
+                    return '<i class="fas fa-exchange-alt amber-icon" title="Equal"></i>';
+            }
+        }
+    });
+</script>
+
+{% endblock %}
+
+
+==================
+
+@app.route('/discrepancy', methods=['GET', 'POST'])
+def handle_discrepancy():
+    if 'username' in session:
+        user = get_user_access(session['username'])
+
+        if not user:
+            user = {'userid': session['username'], 'role': 'user', 'activeStatus': 'active'}
+    try:
+        if request.method == 'POST':
+            application_name = request.form.get('application_name')
+            release_id = request.form.get('release_id')
+            transaction_name = request.form.get('transaction_name')
+
+            # If transaction_name is empty, set it to None
+            transaction_name = transaction_name if transaction_name else None
+
+            query = """
+                WITH LatestReleaseForBackendCall AS (
+                    SELECT 
+                        transactionName AS backendCall, 
+                        MAX(releaseID) AS recentReleaseID
+                    FROM NFRDetails
+                    GROUP BY transactionName
+                ),
+                NFRDetailDepend AS (
+                    SELECT
+                        t.applicationName, 
+                        t.transactionName, 
+                        t.releaseID, 
+                        t.SLA,
+                        t.TPS, /* Assume TPS is in the same table */
+                        t.businessScenario, /* Include businessScenario */
+                        d.backendCall, 
+                        d.callType
+                    FROM NFRDetails t
+                    LEFT JOIN NFROperationDependency d ON t.transactionName = d.transactionName
+                    LEFT JOIN LatestReleaseForBackendCall lrb ON d.backendCall = lrb.backendCall
+                    WHERE t.applicationName = ? 
+                      AND (t.releaseID = ? OR EXISTS (
+                            SELECT 1
+                            FROM LatestReleaseForBackendCall lrb
+                            WHERE lrb.backendCall = d.backendCall
+                              AND lrb.recentReleaseID = t.releaseID
+                        ))
+                      AND (? IS NULL OR t.transactionName LIKE ?)
+                ),
+                SLAComparisonCTE AS (
+                    SELECT 
+                        t.ApplicationName, 
+                        t.transactionName, 
+                        t.backendCall, 
+                        t.CallType, 
+                        t.SLA, 
+                        t.TPS, /* Include TPS for backend call */
+                        t.releaseID,
+                        t.businessScenario, /* Include businessScenario */
+                        CASE 
+                            WHEN t.CallType = 'Async' THEN 
+                                (SELECT MAX(SLA) 
+                                 FROM NFRDetails nr 
+                                 WHERE nr.transactionName = t.backendCall 
+                                   AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall))
+                            WHEN t.CallType = 'Sync' THEN 
+                                (SELECT SUM(SLA) 
+                                 FROM NFRDetails nr 
+                                 WHERE nr.transactionName = t.backendCall 
+                                   AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall))
+                            ELSE 0 
+                        END AS SLAComparison,
+                        (SELECT MAX(TPS) FROM NFRDetails nr WHERE nr.transactionName = t.backendCall AND nr.releaseID = (SELECT MAX(releaseID) FROM NFRDetails WHERE transactionName = t.backendCall)) AS TPSComparison
+                    FROM NFRDetailDepend t
+                )
+                SELECT
+                    ApplicationName, 
+                    releaseID, 
+                    transactionName, 
+                    SLA,
+                    TPS, /* TPS of the main transaction */
+                    businessScenario, /* Include businessScenario in the output */
+                    ROUND(COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0), 2) AS TotalBackendCallDuration,
+                    COALESCE(TotalTPS, 0) AS TotalBackendTPS, /* Total TPS for backend calls */
+                    GROUP_CONCAT(backendCall) AS backendCallList,
+                    CASE
+                        WHEN COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) = 0 THEN 'NA'
+                        ELSE CASE 
+                            WHEN SLA > COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Higher' 
+                            WHEN SLA < COALESCE(TotalSyncSLA, 0) + COALESCE(MaxAsyncSLA, 0) THEN 'Lower' 
+                            ELSE 'Equal' 
+                        END 
+                    END AS CompareSLA,
+                    CASE
+                        WHEN COALESCE(TotalTPS, 0) = 0 THEN 'NA'
+                        ELSE CASE 
+                            WHEN TPS > COALESCE(TotalTPS, 0) THEN 'Higher' 
+                            WHEN TPS < COALESCE(TotalTPS, 0) THEN 'Lower' 
+                            ELSE 'Equal' 
+                        END 
+                    END AS CompareTPS /* Comparison for TPS */
+                FROM (
+                    SELECT 
+                        ApplicationName, 
+                        transactionName, 
+                        releaseID, 
+                        SLA, 
+                        TPS, /* Include TPS for the transaction */
+                        backendCall,
+                        businessScenario, /* Include businessScenario in the aggregation */
+                        SUM(CASE WHEN CallType = 'Sync' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName, releaseID) AS TotalSyncSLA,
+                        MAX(CASE WHEN CallType = 'Async' THEN SLAComparison ELSE 0 END) OVER (PARTITION BY transactionName, releaseID) AS MaxAsyncSLA,
+                        SUM(TPSComparison) OVER (PARTITION BY transactionName, releaseID) AS TotalTPS /* Sum TPS for backend calls */
+                    FROM SLAComparisonCTE
+                ) AS p
+                WHERE ApplicationName = ? 
+                  AND releaseID = ? 
+                  AND (? IS NULL OR transactionName LIKE ?)
+                GROUP BY ApplicationName, releaseID, transactionName, SLA, TPS, businessScenario;
+            """
+
+            params = [
+                application_name,
+                release_id,
+                transaction_name, f'%{transaction_name}%' if transaction_name else None,
+                application_name,
+                release_id,
+                transaction_name, f'%{transaction_name}%' if transaction_name else None
+            ]
+
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute(query, params)
+            rows = cur.fetchall()
+            conn.close()
+
+            data = []
+
+            for row in rows:
+                if row['backendCallList']:
+                    concatenated_calls = f"<b>Backend Duration (sec)</b>: {row['TotalBackendCallDuration']}<br><b>Backend Calls:</b> <br>" + \
+                                         row['backendCallList'].replace(',', ',<br>')
+                else:
+                    concatenated_calls = f"<b>Backend Duration (sec)</b>: {row['TotalBackendCallDuration']}<br><b>Backend Calls:</b> None"
+
+                comparison_icon = ''
+                comparison_text = ''
+
+                if row['CompareSLA'] == 'Higher':
+                    comparison_icon = '<i class="fas fa-arrow-up" title="Higher"></i>'
+                    comparison_text = 'Higher'
+                elif row['CompareSLA'] == 'Lower':
+                    comparison_icon = '<i class="fas fa-arrow-down" title="Lower"></i>'
+                    comparison_text = 'Lower'
+                elif row['CompareSLA'] == 'Equal':
+                    comparison_icon = '<i class="fas fa-exchange-alt" title="Equal"></i>'
+                    comparison_text = 'Equal'
+
+                data.append({
+                    'ApplicationName': row['ApplicationName'],
+                    'releaseID': row['releaseID'],
+                    'transactionName': row['transactionName'],
+                    'SLA': row['SLA'],
+                    'businessScenario': row['businessScenario'], /* Include businessScenario in the output */
+                    'backendCall': concatenated_calls,
+                    'CompareSLA': row['CompareSLA'],
+                    'CompareTPS': row['CompareTPS'] /* Include CompareTPS in the output */
+                })
+
+            return jsonify(data)
+
+        else:
+            conn = get_db_connection()
+            apps = conn.execute('SELECT DISTINCT applicationName FROM NFRDetails').fetchall()
+            conn.close()
+
+            searches_cookie = request.cookies.get('recent_searches')
+            recent_searches = json.loads(searches_cookie) if searches_cookie else []
+
+            return render_template('discrepancy.html', apps=apps, recent_searches=recent_searches, user=user)
+
+    except Exception as e:
+        print("Exception occurred:", str(e))
+        return jsonify(success=False, message=str(e)), 500
+
 # Construct the SQL query
                 query = 'DELETE FROM NFRDetails WHERE Id IN ({seq})'.format(seq=','.join(['?'] * len(ids)))
 
