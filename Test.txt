@@ -1,0 +1,85 @@
+Slide 2: AppHealthWatch Overview
+Title: AppHealthWatch: A Centralized API Monitoring Solution
+
+Purpose:
+
+Provides a single dashboard to monitor the health and performance of critical APIs, ensuring seamless operation of Truist’s services.
+Home Screen Overview:
+
+Upon login, users are presented with a comprehensive list of services and their most recent test statuses for immediate insights into API performance.
+Key Benefits:
+
+Proactive Issue Identification: Detect API problems before they impact customers, minimizing downtime and service disruptions.
+Faster Troubleshooting: Quickly identify and resolve issues with detailed test results and error descriptions.
+Improved Service Reliability: Increase uptime and customer satisfaction through continuous API health checks.
+Enhanced Visibility: Gain clear insights into API performance metrics for data-driven decision-making.
+Screenshot:
+
+Include a screenshot of the AppHealthWatch dashboard with the "TestApplication" selected, highlighting services with varying statuses (green, yellow, red).
+Explanation: Briefly explain the elements of the screenshot:
+Left Panel: Contains status indicators, configuration options, and application selection.
+Right Panel: Displays the test results table with services, operation names, status indicators, and the option to export data.
+Slide 3: Functionalities and Technology
+Title: Robust Features and Efficient Technology
+
+Key Functionalities:
+
+Automated Testing: Execute automated health checks with configurable iteration counts (up to 3) to ensure reliable and consistent results.
+Detailed Reporting: Access comprehensive reports with error descriptions, use case information, and the ability to export data (including request and response details) for deeper analysis.
+In-depth Troubleshooting: Include raw request and response data in the reports, enabling granular analysis and faster resolution of issues.
+Efficient Filtering: Search and filter services by name, operation, or status to quickly access critical information.
+Configuration Management: Easily modify and upload new configurations for evolving testing needs.
+Technology Stack:
+
+Backend: Python with Flask framework (handles API endpoints and logic, providing a flexible and scalable solution).
+Frontend: HTML, CSS, and JavaScript (delivers an intuitive, user-friendly interface).
+Why This Stack?
+
+Python and Flask offer flexibility and efficiency, perfect for building and maintaining a reliable application like AppHealthWatch.
+The chosen stack is scalable, which allows it to grow alongside Truist’s expanding API monitoring needs.
+Slide 4: Business Impact and Next Steps
+Title: Driving Service Reliability and Operational Efficiency
+
+
+Functionalities, Technology, and Interpretation
+
+Title: Robust Features, Efficient Technology, and Clear Results
+Content:
+Key Functionalities:
+Automated Testing: Execute automated health checks with configurable iteration counts (up to 3) for reliable results.
+Detailed Reporting: Access comprehensive reports with error descriptions, use case information, and the ability to export to CSV for analysis.
+In-depth Troubleshooting: Include request and response data in reports for granular analysis and faster resolution.
+Efficient Filtering: Search and filter services by name, operation, or status for quick access to critical information.
+Configuration Management: Easily modify existing configurations and upload new ones for evolving testing needs.
+Technology Stack:
+Backend: Python with Flask framework for handling API endpoints and application logic, ensuring a robust and scalable solution.
+Frontend: HTML, CSS, and JavaScript for a user-friendly interface that provides clear and accessible information.
+Test Result Interpretation:
+Green Status (PASS): All test iterations for the service were successful.
+Yellow Status (PARTIAL): Some iterations failed, indicating potential intermittent issues that require further investigation.
+Red Status (FAIL): All iterations failed, signaling a critical problem with the service that needs immediate attention. Error codes and descriptions provide insights into the cause of the failure.
+
+
+Business Impact:
+
+Reliability: Proactively ensures APIs function smoothly, reducing downtime and improving customer satisfaction.
+Efficiency: Automates API health checks, eliminating the need for manual testing and improving overall operational efficiency.
+Scalability: The platform is designed to scale, ensuring it meets Truist’s future API monitoring needs as the business grows.
+Data-Driven Decisions: Provides valuable performance metrics that empower teams to resolve issues quickly and make informed decisions.
+Next Steps:
+
+Implementation: Timeline for full rollout within Truist’s API environment.
+Training & Support: Ensure teams are trained on using the platform for testing, monitoring, and troubleshooting.
+Future Enhancements: Discuss any upcoming features or improvements planned for AppHealthWatch.
+
+
+
+
+Presentation Notes for Delivery:
+Focus on Value: Emphasize how AppHealthWatch aligns with Truist’s key objectives—enhancing service reliability, improving customer experience, and optimizing operational efficiency.
+Highlight Ease of Use: Mention the simplicity of the interface, with features like the search bar and easy-to-use export options, which make it accessible to a wide range of teams.
+Quantify Benefits: If available, share metrics or case studies demonstrating the tool’s positive impact—such as reduction in API-related incidents or time saved in troubleshooting.
+Address Potential Concerns: Be prepared to discuss:
+Security and Data Privacy: Assure that the platform adheres to Truist's security protocols for handling API requests and responses.
+Integration with Existing Systems: Clarify how AppHealthWatch integrates with Truist’s current API architecture and monitoring processes.
+
