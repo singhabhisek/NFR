@@ -1,3 +1,69 @@
+import zipfile
+import xml.etree.ElementTree as ET
+
+def extract_revision_history(docx_path):
+    required_headers = {"Version #", "Author", "Reviewed By", "Date Reviewed"}
+    found_revision_history = False
+    extracted_data = {}
+
+    # Open the DOCX (ZIP file)
+    with zipfile.ZipFile(docx_path, 'r') as docx:
+        xml_content = docx.read("word/document.xml")  # Read main document XML
+        root = ET.fromstring(xml_content)
+
+        # Define namespaces for XML parsing
+        namespaces = {'w': "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+
+        # Find all tables
+        tables = root.findall(".//w:tbl", namespaces)
+
+        for table in tables:
+            rows = table.findall(".//w:tr", namespaces)
+
+            if len(rows) < 3:
+                continue  # Skip tables with less than 3 rows
+
+            # Extract first row (Table Title)
+            title_cells = [cell.text.strip() if cell.text else "" for cell in rows[0].findall(".//w:t", namespaces)]
+            if not any("Revision History" in title for title in title_cells):  
+                continue  # Skip if not "Revision History"
+
+            # Extract second row (Headers)
+            headers = [cell.text.strip() if cell.text else "" for cell in rows[1].findall(".//w:t", namespaces)]
+            header_indexes = {header: idx for idx, header in enumerate(headers)}
+
+            # Ensure required headers exist
+            if not required_headers.issubset(set(headers)):
+                continue  # Skip if not the correct table
+
+            found_revision_history = True
+
+            # Extract third row (Data Row)
+            row_3_cells = rows[2].findall(".//w:t", namespaces)  
+            extracted_data = {
+                header: row_3_cells[idx].text.strip() if idx < len(row_3_cells) else "❌ Missing"
+                for header, idx in header_indexes.items()
+            }
+
+            break  # Stop after finding the correct table
+
+    # Display results
+    if not found_revision_history:
+        return "❌ 'Revision History' table not found."
+
+    return extracted_data
+
+# Example usage
+docx_path = "your_document.docx"
+result = extract_revision_history(docx_path)
+print(result)
+
+
+
+================
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
