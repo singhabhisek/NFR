@@ -1,0 +1,292 @@
+import com.ibm.mq.*;
+import com.ibm.mq.constants.CMQC;
+
+import java.util.Hashtable;
+
+public class MqPutMessageExample {
+    public static void main(String[] args) {
+        MQQueueManager queueManager = null;
+
+        try {
+            // MQ Connection Properties
+            Hashtable<String, Object> properties = new Hashtable<>();
+            properties.put(CMQC.HOST_NAME_PROPERTY, "tdh-ventwmq01");
+            properties.put(CMQC.CHANNEL_PROPERTY, "CC.TDH.SVRCON");
+            properties.put(CMQC.PORT_PROPERTY, 14161);
+            properties.put(CMQC.USER_ID_PROPERTY, "SV-CCMQ-TEST");
+            properties.put(CMQC.PASSWORD_PROPERTY, "your_password_here");
+            properties.put(CMQC.TRANSPORT_PROPERTY, CMQC.TRANSPORT_MQSERIES_CLIENT);
+
+            // Connect to Queue Manager
+            queueManager = new MQQueueManager("CCATDHQM1", properties);
+
+            // Open the queue for output
+            int openOptions = CMQC.MQOO_OUTPUT + CMQC.MQOO_FAIL_IF_QUIESCING;
+            MQQueue queue = queueManager.accessQueue("CC.MUL.CALLMISNSTRETPA1.TDH.A", openOptions);
+
+            // Create a message and write some text
+            MQMessage message = new MQMessage();
+            message.writeString("Hello from Java!");
+
+            // Set message format
+            message.format = CMQC.MQFMT_STRING;
+
+            // Create a put message options object
+            MQPutMessageOptions pmo = new MQPutMessageOptions();
+
+            // Put the message on the queue
+            queue.put(message, pmo);
+
+            System.out.println("Message sent successfully.");
+
+            // Close the queue and disconnect
+            queue.close();
+            queueManager.disconnect();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+
+==========================
+
+
+import com.ibm.mq.*;
+import com.ibm.mq.constants.CMQC;
+
+public class MqSender {
+
+    MQQueueManager queueMgr = null;
+    MQQueue putQueue = null;
+    MQPutMessageOptions pmo = new MQPutMessageOptions();
+    MQMessage requestMsg = new MQMessage();
+    String msgBody = "Hello from Java MQ put!";  // replace with dynamic message if needed
+
+    public int init() throws Throwable {
+        try {
+            // Set MQ connection environment
+            MQEnvironment.hostname = "tdh-ventwmq01";
+            MQEnvironment.channel = "CC.TDH.SVRCON";
+            MQEnvironment.port = 14161;
+            MQEnvironment.userID = "SV-CCMQ-TEST";
+            MQEnvironment.password = "your_password_here";
+
+            String queueMgrName = "CCATDHQM1";
+            String putQueueName = "CC.MUL.CALLMISNSTRETPA1.TDH.A";
+
+            // Connect to the queue manager
+            queueMgr = new MQQueueManager(queueMgrName);
+
+            // Access the put queue
+            int openOptions = CMQC.MQOO_OUTPUT | CMQC.MQOO_FAIL_IF_QUIESCING;
+            putQueue = queueMgr.accessQueue(putQueueName, openOptions);
+
+            // Create and format the message
+            requestMsg = new MQMessage();
+            requestMsg.writeString(msgBody);
+            requestMsg.format = CMQC.MQFMT_STRING;
+
+            // Put the message
+            putQueue.put(requestMsg, pmo);
+
+            System.out.println("Message sent successfully.");
+
+            // Clean up
+            putQueue.close();
+            queueMgr.disconnect();
+
+        } catch (Exception e) {
+            System.err.println("Error connecting to queue manager or accessing queue: " + e.getMessage());
+        }
+
+        return 0;
+    }
+
+    public static void main(String[] args) throws Throwable {
+        MqSender sender = new MqSender();
+        sender.init();
+    }
+}
+
+
+
+==================
+
+
+import lrapi.lr;
+import com.ibm.mq.*;
+
+public class Actions {
+
+    // MQ configuration
+    String queueMgrName = "CCATDHQM1";
+    String putQueueName = "CC.MUL.CALLMISNSTRETPA1.TDH.A";
+    String getQueueName = "TEST.REPLY.QUEUE"; // Set appropriately if you want to receive a reply
+
+    MQQueueManager queueMgr = null;
+    MQQueue getQueue = null;
+    MQQueue putQueue = null;
+    MQPutMessageOptions pmo = new MQPutMessageOptions();
+    MQGetMessageOptions gmo = new MQGetMessageOptions();
+    MQMessage requestMsg = new MQMessage();
+    MQMessage responseMsg = new MQMessage();
+    String msgBody = null;
+
+    public int init() throws Throwable {
+        try {
+            // MQ connection settings
+            MQEnvironment.hostname = "tdh-ventwmq01";
+            MQEnvironment.port = 14161;
+            MQEnvironment.channel = "CC.TDH.SVRCON";
+            MQEnvironment.userID = "SV-CCMQ-TEST";
+            MQEnvironment.password = "your_password_here"; // Replace or load securely
+
+            // Connect to queue manager
+            queueMgr = new MQQueueManager(queueMgrName);
+
+            // Access queues
+            putQueue = queueMgr.accessQueue(putQueueName, MQC.MQOO_BIND_NOT_FIXED | MQC.MQOO_OUTPUT);
+            getQueue = queueMgr.accessQueue(getQueueName, MQC.MQOO_INPUT_AS_Q_DEF | MQC.MQOO_OUTPUT);
+
+        } catch (Exception e) {
+            lr.error_message("Error connecting to queue manager or accessing queues: " + e.getMessage());
+            lr.exit(lr.EXIT_VUSER, lr.FAIL);
+        }
+
+        return 0;
+    }
+
+    public int action() throws Throwable {
+        msgBody = lr.eval_string("{OrderNum}");
+
+        requestMsg.clearMessage();
+        responseMsg.clearMessage();
+
+        lr.start_transaction("test_message");
+
+        try {
+            pmo.options = MQC.MQPMO_NEW_MSG_ID;
+            requestMsg.replyToQueueName = getQueueName;
+            requestMsg.report = MQC.MQRO_PASS_MSG_ID;
+            requestMsg.format = MQC.MQFMT_STRING;
+            requestMsg.messageType = MQC.MQMT_REQUEST;
+
+            requestMsg.writeString(msgBody);
+
+            putQueue.put(requestMsg, pmo);
+
+        } catch (Exception e) {
+            lr.error_message("Error sending message: " + e.getMessage());
+            lr.exit(lr.EXIT_VUSER, lr.FAIL);
+        }
+
+        // Receive message
+        try {
+            responseMsg.correlationId = requestMsg.messageId;
+            gmo.matchOptions = MQC.MQMO_MATCH_CORREL_ID;
+            gmo.options = MQC.MQGMO_WAIT;
+            gmo.waitInterval = 60000;
+
+            getQueue.get(responseMsg, gmo);
+
+            String msg = responseMsg.readStringOfByteLength(responseMsg.getTotalMessageLength());
+            lr.output_message(msg);
+
+        } catch (Exception e) {
+            lr.error_message("Error receiving message: " + e.getMessage());
+            lr.exit(lr.EXIT_VUSER, lr.FAIL);
+        }
+
+        lr.end_transaction("test_message", lr.AUTO);
+        return 0;
+    }
+
+    public int end() throws Throwable {
+        try {
+            putQueue.close();
+            getQueue.close();
+            queueMgr.close();
+        } catch (Exception e) {
+            lr.error_message("Exception in closing the connections: " + e.getMessage());
+            lr.exit(lr.EXIT_VUSER, lr.FAIL);
+        }
+
+        return 0;
+    }
+}
+
+
+==============
+
+import com.ibm.mq.*;
+import com.ibm.mq.constants.CMQC;
+
+public class MqConnectionHandler {
+
+    MQQueueManager queueMgr = null;
+
+    public int init() {
+        try {
+            // MQ connection properties
+            MQEnvironment.hostname = "tdh-ventwmq01";
+            MQEnvironment.channel = "CC.TDH.SVRCON";
+            MQEnvironment.port = 14161;
+            MQEnvironment.userID = "SV-CCMQ-TEST";
+            MQEnvironment.password = "your_password_here";
+
+            String queueMgrName = "CCATDHQM1";
+
+            System.out.println("Attempting to connect to MQ...");
+
+            // Try to connect
+            queueMgr = new MQQueueManager(queueMgrName);
+            System.out.println("✅ Connected to queue manager: " + queueMgrName);
+
+        } catch (MQException mqe) {
+            System.err.println("❌ MQException caught:");
+            System.err.println("  - Completion Code: " + mqe.completionCode);
+            System.err.println("  - Reason Code: " + mqe.reasonCode);
+
+            // Handle known reason codes
+            switch (mqe.reasonCode) {
+                case MQException.MQRC_NOT_AUTHORIZED: // 2035
+                    System.err.println("🔐 Reason: Not authorized to access the queue manager or queue (2035).");
+                    break;
+                case MQException.MQRC_Q_MGR_NOT_AVAILABLE: // 2059
+                    System.err.println("🔌 Reason: Queue Manager not available or not running (2059).");
+                    break;
+                case MQException.MQRC_HOST_NOT_AVAILABLE: // 2538
+                    System.err.println("🌐 Reason: Host not reachable or port incorrect (2538).");
+                    break;
+                case MQException.MQRC_CONNECTION_BROKEN: // 2009
+                    System.err.println("💥 Reason: Connection broken (2009).");
+                    break;
+                default:
+                    System.err.println("⚠️ Reason: Unhandled MQ error. Code: " + mqe.reasonCode);
+                    break;
+            }
+
+            return -1;
+        } catch (Exception e) {
+            System.err.println("🚨 General exception occurred:");
+            e.printStackTrace();
+            return -2;
+        }
+
+        return 0;
+    }
+
+    public static void main(String[] args) {
+        MqConnectionHandler handler = new MqConnectionHandler();
+        int result = handler.init();
+
+        if (result == 0) {
+            System.out.println("🎉 MQ initialization completed successfully.");
+        } else {
+            System.out.println("❗ MQ initialization failed with code: " + result);
+        }
+    }
+}
